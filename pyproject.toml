@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "exactus"
+version = "0.7.0"
+description = "Bounded external computers for LLMs"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Olshansky Grigory" }]
+
+[project.optional-dependencies]
+server = ["fastapi>=0.100,<1"]
+test = ["uvicorn>=0.30,<1"]
+
+[project.scripts]
+exactus = "exactus.adapters.cli:main"
+
+[project.entry-points."vllm.endpoint_plugins"]
+exactus = "exactus.adapters.default_plugin:ExactusEndpointPlugin"
+
+[tool.setuptools.packages.find]
+where = ["src"]
