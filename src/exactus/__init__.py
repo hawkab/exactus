@@ -6,7 +6,7 @@ Author: Olshansky Grigory
 from __future__ import annotations
 
 __author__ = "Olshansky Grigory"
-__version__ = "0.7.1"
+__version__ = "0.7.0"
 
 from .application.compute import ComputeResult, ComputeService, Operation
 from .application.predict import DraftService

@@ -35,17 +35,6 @@ class DeadlineHeaders(BaseHTTPRequestHandler):
                     b"HTTP/1.0 503 Service Unavailable\r\nContent-Type: application/json\r\n"
                     b'Connection: close\r\n\r\n{"error":"server is at capacity","error_code":"overloaded"}'
                 )
-                # Closing with an unread upload can reset TCP while a normal
-                # client is still sending its body, hiding the typed 503 behind
-                # BrokenPipe. Half-close the reply, then boundedly drain input.
-                self.connection.shutdown(socket.SHUT_WR)
-                self.connection.settimeout(min(0.1, self._timeout))
-                remaining = 65536
-                while remaining:
-                    chunk = self.connection.recv(min(remaining, 8192))
-                    if not chunk:
-                        break
-                    remaining -= len(chunk)
         except OSError:
             self.close_connection = True  # normal client disconnect or header deadline
 

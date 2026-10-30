@@ -87,16 +87,6 @@ The offline logits helper is not a vLLM plugin; speculative custom forcing
 is unsupported. Native GPU performance and KV/recurrent-cache reuse require
 qualification on the exact runtime; arithmetic HTTP results do not establish them.
 
-Set `EXACTUS_LLMOS_URL=http://127.0.0.1:8800` in the vLLM API process to use
-the local llmos CPU queue for native spans, technical batches and plans.
-`EXACTUS_LLMOS_BUDGET_MS` defaults to 50 (maximum 100); this includes waiting
-and transport, not model generation. Request/call IDs are checked on replies.
-Preserve-text/audit generation resumes once without tools on timeout, overload
-or transport failure, with `tools_disabled:true`, `exact_final:false` and no
-task-verification claim. Strict/numeric-final fail rather than downgrade.
-This is the explicit native Exactus API, not a change to ordinary chat or a
-network callback per GPU token. Existing MTP and cache ownership stay in vLLM.
-
 ## Validation
 
 `pip install '.[server,test]'` then
