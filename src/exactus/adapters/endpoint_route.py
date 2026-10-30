@@ -288,4 +288,11 @@ def _serialize(result, mode):
         "prompt_tokens": result.prompt_tokens,
         "sampled_tokens_exact": result.sampled_tokens_exact,
         "mode": mode,
+        **({'compute_backend': 'llmos', 'tool_calls': list(result.tool_calls)}
+           if result.tool_calls else {}),
+        **({'tool_fallback': result.tool_fallback, 'tools_disabled': True,
+            'exact_final': False, 'task_verified': None,
+            'protocol_complete': False,
+            'verification_scope': 'unverified_model_fallback'}
+           if result.tool_fallback else {}),
     }

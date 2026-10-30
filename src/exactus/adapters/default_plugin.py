@@ -3,6 +3,7 @@
 import inspect
 import asyncio
 import weakref
+import os
 
 from .async_work import blocking
 from .endpoint_adapter import ExactusCoordinator
@@ -133,11 +134,17 @@ class ExactusEndpointPlugin:
             limit = getattr(args, "max_model_len", None)
         if type(limit) is not int or limit <= 0:
             raise PluginStateError("cannot resolve the native model context limit")
-        worker = WorkerExternalComputer()
+        llmos_url = os.environ.get('EXACTUS_LLMOS_URL')
+        if llmos_url:
+            from .llmos import LLMOSExternalComputer
+            worker = LLMOSExternalComputer(llmos_url,
+                budget_ms=int(os.environ.get('EXACTUS_LLMOS_BUDGET_MS', '50')))
+        else:
+            worker = WorkerExternalComputer()
         state.exactus_worker = worker
         # A SQL VM budget must not monopolize the lock needed to resume the
         # model's short integer spans. Both child processes remain lazy.
-        state.exactus_external_computer_worker = WorkerExternalComputer()
+        state.exactus_external_computer_worker = worker if llmos_url else WorkerExternalComputer()
         names = getattr(args, "served_model_name", None) or [args.model]
         state.exactus_models = (names,) if isinstance(names, str) else tuple(names)
         state.exactus_coordinator = ExactusCoordinator(

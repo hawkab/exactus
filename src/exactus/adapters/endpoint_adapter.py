@@ -41,6 +41,8 @@ class EndpointResult:
     cpu_stage_s: float = 0.0
     prompt_tokens: int = 0
     sampled_tokens_exact: bool = True
+    tool_fallback: str | None = None
+    tool_calls: tuple = ()
 
 
 class ExactusCoordinator:
@@ -133,8 +135,12 @@ class ExactusCoordinator:
             self._external_computer,
             dict(data) if data is not None else None,
         )
+        bound_factory = getattr(external_computer, 'for_request', None)
         factory = getattr(external_computer, "request", None)
-        if callable(factory):
+        if callable(bound_factory):
+            request = await blocking(bound_factory, request_data, rid)
+            external_computer, request_data = request, None
+        elif callable(factory):
             request = await blocking(factory, request_data)
             external_computer, request_data = request, None
         try:
@@ -163,19 +169,20 @@ class ExactusCoordinator:
                     sampled_exact and segment.token_count_source != "tokenizer_estimate"
                 )
                 tick = time.monotonic()
-                stage = await blocking(
-                    compute_segment,
-                    machine,
-                    segment,
-                    tokens,
-                    operations,
-                    external_computer,
-                    request_data,
-                    self._tokenizer,
-                    output_format,
-                    mode,
-                    task_prompt,
-                )
+                from .llmos import LLMOSUnavailable
+                try:
+                    stage = await blocking(
+                        compute_segment, machine, segment, tokens, operations,
+                        external_computer, request_data, self._tokenizer,
+                        output_format, mode, task_prompt,
+                    )
+                except LLMOSUnavailable as exc:
+                    cpu_stage += time.monotonic() - tick
+                    return await self._without_tools(tokens, segment, exc.code,
+                        rid, parent_id, max_tokens, sampled, known, prefill,
+                        engine_wait, cpu_stage, prompt_tokens, started, mode,
+                        tuple(getattr(request, 'calls', ())), step+2,
+                        sampled_exact, tuple(operations))
                 cpu_stage += time.monotonic() - tick
                 known += stage.known
                 prefill += stage.prefill
@@ -203,8 +210,50 @@ class ExactusCoordinator:
                         cpu_stage,
                         prompt_tokens,
                         sampled_exact,
+                        None,
+                        tuple(getattr(request, 'calls', ())),
                     )
             raise GrammarError("segment limit exhausted")
         finally:
             if request is not None:
                 await blocking(request.close)
+
+    async def _without_tools(self, tokens, segment, reason, rid, parent_id,
+            max_tokens, sampled, known, prefill, engine_wait, cpu_stage,
+            prompt_tokens, started, mode, calls, segments, sampled_exact, operations):
+        # Do not claim strict/exact verification for an unaided model response.
+        if mode in ('strict', 'numeric-final'):
+            from .llmos import LLMOSUnavailable
+            raise LLMOSUnavailable(reason)
+        plain = getattr(self._engine, 'generate_without_tools', None)
+        if not callable(plain):
+            from .llmos import LLMOSUnavailable
+            raise LLMOSUnavailable(reason)
+        ids = list(segment.token_ids) if segment.token_ids else self._tokenizer.encode(segment.text)
+        injection = self._tokenizer.encode(
+            '\n<calc-error>Tool unavailable: '+reason+'. No result was obtained. '
+            'Tools are disabled for the rest of this request. Solve the original '
+            'task yourself and give the answer without calc tags or tool calls.'
+            '</calc-error>\n')
+        tokens.extend(ids)
+        tokens.extend(injection)
+        budget = max_tokens - sampled - known
+        if self._context_limit is not None:
+            budget = min(budget, self._context_limit - len(tokens))
+        if budget <= 0:
+            raise BudgetError('no remaining budget for generation without tools')
+        tick = time.monotonic()
+        continuation = await plain(tokens, budget, rid+':without-tools')
+        engine_wait += time.monotonic() - tick
+        if type(continuation.sampled_tokens) is not int or not 0 <= continuation.sampled_tokens <= budget:
+            raise BudgetError('engine violated fallback token budget')
+        return EndpointResult(text=continuation.text, operations=operations,
+            engine_segments=segments,
+            sampled_tokens=sampled+continuation.sampled_tokens, known_tokens=known,
+            prefill_tokens=prefill+len(ids)+len(injection), exact_final=False,
+            elapsed_s=time.monotonic()-started, request_id=rid, parent_id=parent_id,
+            transcript=continuation.text, finish_reason=continuation.finish_reason,
+            proof=Proof(()), mode=mode, engine_wait_s=engine_wait,
+            cpu_stage_s=cpu_stage, prompt_tokens=prompt_tokens+len(tokens),
+            sampled_tokens_exact=sampled_exact and continuation.token_count_source != 'tokenizer_estimate',
+            tool_fallback=reason, tool_calls=calls)

@@ -55,6 +55,14 @@ class NativeEngine:
         self._sampling_factory = sampling_factory
 
     async def generate(self, prompt_ids, max_tokens, request_id):
+        return await self._generate(prompt_ids, max_tokens, request_id,
+                                    stop=["</calc>", "</calc-final>"])
+
+    async def generate_without_tools(self, prompt_ids, max_tokens, request_id):
+        """One normal generation with no compute stops and no executor callbacks."""
+        return await self._generate(prompt_ids, max_tokens, request_id, stop=[])
+
+    async def _generate(self, prompt_ids, max_tokens, request_id, *, stop):
         factory = self._sampling_factory
         if factory is None:
             from vllm import SamplingParams
@@ -67,7 +75,7 @@ class NativeEngine:
         params = factory(
             max_tokens=max_tokens,
             temperature=0,
-            stop=["</calc>", "</calc-final>"],
+            stop=stop,
             include_stop_str_in_output=True,
             output_kind=output_kind,
         )
