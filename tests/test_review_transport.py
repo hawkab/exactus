@@ -50,7 +50,12 @@ class ReviewTransport(unittest.TestCase):
         return server, base
 
     def test_timed_out_work_keeps_lease(self):
-        """Verify timed out work keeps lease."""
+        """Keep admission occupied until timed-out computation finishes.
+
+        Overload probes have no body: an early 503 response must not race
+        the client's separate POST-body write. Upload deadlines are tested
+        independently.
+        """
         started, release = threading.Event(), threading.Event()
 
         class ExternalComputer:
@@ -70,9 +75,7 @@ class ReviewTransport(unittest.TestCase):
             self.assertEqual(status, 504)
             self.assertTrue(started.is_set())
             for _ in range(3):
-                status, body, _ = call_json(
-                    base + "/v1/chat/completions", {"messages": []}
-                )
+                status, body, _ = call_json(base + "/v1/chat/completions", method="GET")
                 self.assertEqual(status, 503)
                 self.assertEqual(body["error_code"], "overloaded")
             self.assertEqual(len(self.upstream.calls), 1)
