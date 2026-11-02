@@ -1,12 +1,14 @@
 """One LLM generation -> bounded plan -> deterministic answer (no rewrite call)."""
 
+__author__ = "Olshansky Grigory"
+
 import json
 import time
 
+from ..domain.errors import ExactusError, WorkerError
 from ..external_computers.plan import decode_plan, validate_checks
 from ..external_computers.values import packed
 from ..proxy_modes import RequestError, as_request_error
-from ..domain.errors import ExactusError, WorkerError
 
 SQL_EXAMPLE_INPUTS = {
     "tables": {"items": {"columns": ["item_id"], "rows": [[1], [1], [2]]}}
@@ -45,6 +47,7 @@ SQL_HINT = (
 
 
 def complete(proxy, payload, headers):
+    """Generate a source-bound compute plan once and execute it without a synthesis call."""
     request_started = time.monotonic()
     if payload.get("compute_plan") is not True:
         raise RequestError("compute_plan must be true", "invalid_request")
@@ -144,6 +147,7 @@ def complete(proxy, payload, headers):
 
 
 def _finish(proxy, response, inputs, checks, generation_s, started):
+    """Render a verified plan answer while retaining the original generation usage."""
     if (
         type(response) is not dict
         or type(response.get("choices")) is not list

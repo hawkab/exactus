@@ -1,7 +1,4 @@
-"""Shared test support: scripted worker doubles and pipe transports.
-
-Author: Olshansky Grigory
-"""
+"""Shared test support: scripted worker doubles and pipe transports."""
 
 from __future__ import annotations
 

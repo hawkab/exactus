@@ -15,22 +15,28 @@ Integration points:
 The coordinator evaluates spans and re-feeds computed values once as
 prefill; a duplicate logits planner is rejected. The draft predictor path
 is experimental and requires a real verifier for speculative acceptance;
-it is not lossless and no such guarantee is made.
-
-Author: Olshansky Grigory
-"""
+it is not lossless and no such guarantee is made."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 from collections.abc import Mapping
 
 from ..domain.errors import ExactusError
-
-__author__ = "Olshansky Grigory"
+from .plugin_state import DeferredCoordinator
 
 
 class PluginStateError(ExactusError):
     """Plugin lifecycle state is missing or misconfigured."""
+
+
+class _StateCoordinator(DeferredCoordinator):
+    """Preserve tokenizer-first construction for configured plugin callers."""
+
+    def __init__(self, tokenizer, state):
+        """Bind configured dependencies using the shared deferred coordinator."""
+        super().__init__(state, tokenizer)
 
 
 class ExactusGenerateWrapper:
@@ -93,38 +99,6 @@ class ExactusGenerateWrapper:
         )
 
 
-class _StateCoordinator:
-    """Deferred coordinator view resolved through the plugin app state.
-
-    Routes are registered before the engine exists (plugin phase A);
-    each request resolves the coordinator built in phase B.
-    """
-
-    def __init__(self, tokenizer, state) -> None:
-        """Store the tokenizer and the shared plugin state object."""
-        self._tokenizer = tokenizer
-        self._state = state
-
-    def _bound(self):
-        """Return the phase-B coordinator or fail the request."""
-        coordinator = getattr(self._state, "exactus_coordinator", None)
-        if coordinator is None:
-            raise PluginStateError("exactus plugin state is not initialized")
-        return coordinator
-
-    async def run(self, *args, **kwargs):
-        """Forward one request to the coordinator created in init_state."""
-        return await self._bound().run(*args, **kwargs)
-
-    async def run_external_computers(self, tasks):
-        """Forward one external computer batch to the coordinator created in init_state."""
-        return await self._bound().run_external_computers(tasks)
-
-    async def run_plan(self, plan, **kwargs):
-        """Forward one compute plan to the coordinator created in init_state."""
-        return await self._bound().run_plan(plan, **kwargs)
-
-
 class _ExactusEndpointPlugin:
     """Configured plugin satisfying the vLLM EndpointPlugin protocol."""
 
@@ -146,7 +120,7 @@ class _ExactusEndpointPlugin:
         from .endpoint_route import attach
 
         app.state.exactus_planner = self._planner
-        attach(app, _StateCoordinator(self._tokenizer, app.state), self._models)
+        attach(app, DeferredCoordinator(app.state, self._tokenizer), self._models)
 
     async def init_state(self, engine_client, state, args) -> None:
         """Build the engine port and coordinator once the engine exists."""

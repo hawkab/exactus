@@ -1,16 +1,13 @@
-"""Experimental tuple-indexed n-gram proposals; no target-model verifier.
-
-Author: Olshansky Grigory
-"""
+"""Experimental tuple-indexed n-gram proposals; no target-model verifier."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 from collections import Counter, defaultdict, deque
 from collections.abc import Iterable, Sequence
 
 from ..domain.ports import Candidate
-
-__author__ = "Olshansky Grigory"
 
 
 class NgramDraftPredictor:

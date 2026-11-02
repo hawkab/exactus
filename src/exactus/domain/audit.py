@@ -1,13 +1,10 @@
-"""Audited proofs of computed spans: what was computed and how it grounds.
-
-Author: Olshansky Grigory
-"""
+"""Audited proofs of computed spans: what was computed and how it grounds."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 __author__ = "Olshansky Grigory"
+
+from dataclasses import dataclass
 
 DERIVED = "\u22a2"
 QED = "\u220e"
@@ -46,6 +43,7 @@ class Proof:
         *,
         parsed=None,
     ):
+        """Initialize Proof state and dependencies."""
         self.spans = spans
         self.check = check
         self._parsed = parsed

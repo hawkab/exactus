@@ -1,7 +1,4 @@
-"""Tests for the persistent sandboxed worker adapter.
-
-Author: Olshansky Grigory
-"""
+"""Tests for the persistent sandboxed worker adapter."""
 
 import unittest
 

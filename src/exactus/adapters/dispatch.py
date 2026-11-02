@@ -4,19 +4,16 @@ Adopted from the Turnstyle dispatch idea: a prompt that carries a
 computable expression is grounded by an external computer, so correctness does not
 depend on the model emitting protocol markers. Extraction is
 conservative: a candidate must look like an expression and evaluate
-exactly under the bounded grammar, otherwise dispatch abstains.
-
-Author: Olshansky Grigory
-"""
+exactly under the bounded grammar, otherwise dispatch abstains."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 import re
 from collections.abc import Mapping
 
 from ..domain.errors import ExactusError
-
-__author__ = "Olshansky Grigory"
 
 _CUE_RE = re.compile(
     r"\s*(?:вычисли(?:ть)?|посчитай|сколько будет|найди|compute|calculate|"

@@ -1,7 +1,5 @@
-"""Benchmark: contour two draft accuracy on a held-out number split.
+"""Benchmark: contour two draft accuracy on a held-out number split."""
 
-Author: Olshansky Grigory
-"""
 from __future__ import annotations
 
 import sys
@@ -34,8 +32,9 @@ TEST_HELD_OUT = [
 ]
 
 
-def accuracy(predictor: NgramDraftPredictor, sequences: list[list[int]],
-             blind_token: int) -> tuple[int, int, int, int]:
+def accuracy(
+    predictor: NgramDraftPredictor, sequences: list[list[int]], blind_token: int
+) -> tuple[int, int, int, int]:
     """Return (ngram hits, blind hits, total) top-1 accuracy counts."""
     hits = blind_hits = total = 0
     for sequence in sequences:
@@ -55,10 +54,13 @@ def main() -> None:
     predictor.fit(train)
     counts = Counter(token for seq in train for token in seq)
     blind_token = counts.most_common(1)[0][0]
-    for name, texts in (("in-sample (train prefixes)", TEST_IN_SAMPLE),
-                        ("held-out (new numbers)", TEST_HELD_OUT)):
-        hits, blind_hits, total = accuracy(predictor, [list(s.encode("utf-8")) for s in texts],
-                                           blind_token)
+    for name, texts in (
+        ("in-sample (train prefixes)", TEST_IN_SAMPLE),
+        ("held-out (new numbers)", TEST_HELD_OUT),
+    ):
+        hits, blind_hits, total = accuracy(
+            predictor, [list(s.encode("utf-8")) for s in texts], blind_token
+        )
         print(f"{name}: probe positions={total}")
         print(f"  ngram top-1 {hits}/{total} = {hits / total:.3f}")
         print(f"  blind      {blind_hits}/{total} = {blind_hits / total:.3f}")

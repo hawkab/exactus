@@ -1,17 +1,23 @@
 """Two-phase installed plugin wiring, including route and worker cleanup."""
 
+__author__ = "Olshansky Grigory"
+
 import asyncio
-from types import SimpleNamespace as NS
 import unittest
+from types import SimpleNamespace as NS
 
 from exactus.adapters.default_plugin import ExactusEndpointPlugin
-from tests.test_endpoint_limits import post, FastAPI
+from tests.test_endpoint_limits import FastAPI, post
 
 
 @unittest.skipUnless(FastAPI, "server extra is not installed")
 class PluginLifecycle(unittest.TestCase):
+    """Exercise Plugin Lifecycle behavior with isolated fixtures."""
+
     def test_late_route_collision_is_not_silently_shadowed(self):
+        """Verify late route collision is not silently shadowed."""
         from fastapi import FastAPI
+
         from exactus.adapters.endpoint_plugin import PluginStateError
 
         app = FastAPI()
@@ -22,17 +28,23 @@ class PluginLifecycle(unittest.TestCase):
             asyncio.run(plugin.init_state(None, app.state, NS()))
 
     def test_attach_init_generate_and_cleanup(self):
+        """Verify attach init generate and cleanup."""
+
         class Tokenizer:
+            """Exercise Tokenizer behavior with isolated fixtures."""
+
             def encode(self, text, **kwargs):
+                """Encode fixture text into deterministic byte token identifiers."""
                 return list(text.encode())
 
             def decode(self, ids, **kwargs):
+                """Decode fixture token identifiers into text."""
                 return bytes(ids).decode()
 
             def apply_chat_template(self, messages, **kwargs):
+                """Render fixture messages using the test chat template."""
                 self.messages = messages
-                # Recent Transformers defaults to BatchEncoding unless the
-                # native adapter explicitly requests plain token IDs.
+
                 if kwargs.get("return_dict", True):
                     return {"input_ids": [65]}
                 if kwargs.get("return_tensors") is not None:
@@ -40,12 +52,16 @@ class PluginLifecycle(unittest.TestCase):
                 return [65]
 
         class Client:
+            """Exercise Client behavior with isolated fixtures."""
+
             model_config = NS(max_model_len=4096)
 
             async def get_tokenizer(self):
+                """Return the tokenizer owned by the qualification client double."""
                 return Tokenizer()
 
             async def generate(self, prompt, params, rid):
+                """Yield the configured generation result for a correlated engine request."""
                 yield NS(
                     finished=True,
                     outputs=[
@@ -58,9 +74,11 @@ class PluginLifecycle(unittest.TestCase):
                 )
 
             async def abort(self, rid):
+                """Abort the correlated request in the qualification engine double."""
                 raise AssertionError("no abort on successful completion")
 
         async def run():
+            """Execute one synchronized workload case."""
             app, plugin = FastAPI(), ExactusEndpointPlugin()
             plugin.attach_router(app)
             await plugin.init_state(

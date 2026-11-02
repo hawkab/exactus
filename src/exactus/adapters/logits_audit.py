@@ -1,13 +1,10 @@
-"""Bounded per-request audit of forced versus wanted tokens.
-
-Author: Olshansky Grigory
-"""
+"""Bounded per-request audit of forced versus wanted tokens."""
 
 from __future__ import annotations
 
-from collections import deque
-
 __author__ = "Olshansky Grigory"
+
+from collections import deque
 
 AUDIT_LIMIT = 256
 
@@ -75,8 +72,6 @@ def audit_snapshot(row, vocab: int) -> tuple[int, float] | None:
     """
     try:
         if callable(getattr(row, "topk", None)):
-            # Explicit diagnostic mode only: one vector reduction and compact
-            # transfer, never vocab-size Python scalar reads on a CUDA tensor.
             values, indices = row.detach().topk(min(2, vocab))
             values, indices = values.cpu().tolist(), indices.cpu().tolist()
             return indices[0], values[0] - values[1] if len(values) > 1 else 0.0

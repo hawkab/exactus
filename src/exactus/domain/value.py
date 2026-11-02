@@ -1,14 +1,12 @@
-"""Computed values with explicit rendering formats.
+"""Computed values with explicit rendering formats."""
 
-Author: Olshansky Grigory
-"""
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 from dataclasses import dataclass
 
 from .errors import FormatError
-
-__author__ = "Olshansky Grigory"
 
 FORMATS = ("dec", "hex", "bin")
 

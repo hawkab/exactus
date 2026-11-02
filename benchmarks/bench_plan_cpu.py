@@ -1,17 +1,21 @@
 """Portable 0.4 batch + caller rendering vs 0.5 plan + contracts, no model calls."""
 
+__author__ = "Olshansky Grigory"
+
 import argparse
 import json
 import platform
 import statistics
 import time
 
+from plan_cases import cases, gold_plan
+
 import exactus
 from exactus.adapters.worker import WorkerExternalComputer
-from plan_cases import cases, gold_plan
 
 
 def bind_inputs(value, inputs):
+    """Bind literal task inputs into the legacy compute strategy."""
     if type(value) is list:
         return [bind_inputs(v, inputs) for v in value]
     if type(value) is dict:
@@ -22,8 +26,7 @@ def bind_inputs(value, inputs):
 
 
 def legacy_render(value, outputs):
-    # Reference fixture templates only use dict/list result selectors. This is
-    # explicit client-side glue, not an extra hidden model or legacy capability.
+    """Render the reference answer using the legacy computation path."""
     if type(value) is list:
         return [legacy_render(v, outputs) for v in value]
     if type(value) is dict:
@@ -37,6 +40,7 @@ def legacy_render(value, outputs):
 
 
 def main():
+    """Parse command-line options and run this module workload."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("batch", "plan"), required=True)
     parser.add_argument("--n", type=int, default=100)

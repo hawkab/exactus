@@ -14,6 +14,7 @@ authors = [{ name = "Olshansky Grigory" }]
 [project.optional-dependencies]
 server = ["fastapi>=0.100,<1"]
 test = ["uvicorn>=0.30,<1"]
+dev = ["ruff==0.17.3"]
 
 [project.scripts]
 exactus = "exactus.adapters.cli:main"
@@ -23,3 +24,10 @@ exactus = "exactus.adapters.default_plugin:ExactusEndpointPlugin"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["F", "I", "D1"]

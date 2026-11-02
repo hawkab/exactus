@@ -1,11 +1,13 @@
 """Canonical external computer names across library, worker and CLI."""
 
+__author__ = "Olshansky Grigory"
+
 import hashlib
 import json
-from pathlib import Path
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 
 from exactus import ExternalComputer
 from exactus.adapters.digest import HashlibHasher
@@ -16,7 +18,10 @@ from exactus.external_computers.values import packed
 
 
 class ExternalComputerTerminology(unittest.TestCase):
+    """Exercise External Computer Terminology behavior with isolated fixtures."""
+
     def test_public_port_and_batch_exports(self):
+        """Verify public port and batch exports."""
         external_computer = InProcessExternalComputer(HashlibHasher())
         self.assertIsInstance(external_computer, ExternalComputer)
         spec = {"kind": "calc", "expression": "6*7"}
@@ -38,6 +43,7 @@ class ExternalComputerTerminology(unittest.TestCase):
         )
 
     def test_worker_uses_external_computer_task_protocol(self):
+        """Verify worker uses external computer task protocol."""
         external_computer = WorkerExternalComputer()
         self.addCleanup(external_computer.close)
         result = external_computer.run_external_computers(
@@ -54,6 +60,7 @@ class ExternalComputerTerminology(unittest.TestCase):
         self.assertEqual(result["model_calls"], 0)
 
     def test_external_computers_cli(self):
+        """Verify external computers cli."""
         result = subprocess.run(
             [sys.executable, "-m", "exactus.adapters.cli", "external-computers"],
             cwd=Path(__file__).resolve().parents[1],

@@ -1,101 +1,24 @@
 """Real 1+2 DAG through deployed surfaces. Dry-run never calls a model."""
 
+__author__ = "Olshansky Grigory"
+
 import argparse
-from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
-from pathlib import Path
 import random
 import sys
-import threading
-import time
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from agent_cases import case, judge
+from agent_cases import case
 from agent_surface import Surface
-from bench_report import aggregate, paired, metric_row
+from agent_workflow import run_graph as run_graph
 from bench_manifest import load_runtime
-
-
-def run_graph(task, call):
-    started = time.perf_counter()
-    barrier = threading.Barrier(3)
-
-    def node(name):
-        barrier.wait(timeout=30)
-        reply = call(task["prompts"][name])
-        reply["judge"] = judge(
-            reply["text"],
-            {"parallel_audits": 2} if name == "planner" else task["expected"][name],
-        )
-        return reply
-
-    stages = {}
-    try:
-        with ThreadPoolExecutor(max_workers=3) as pool:
-            futures = {
-                name: pool.submit(node, name)
-                for name in ("planner", "capacity", "audit")
-            }
-            for name, future in futures.items():
-                try:
-                    stages[name] = future.result()
-                except Exception as exc:
-                    stages[name] = {
-                        "error": str(exc),
-                        "partial": getattr(exc, "partial", None),
-                        "judge": {"correct": False, "failures": ["exception"]},
-                    }
-        if all(s["judge"]["correct"] for s in stages.values()):
-            prompt = (
-                task["schema"]
-                + task["brief"]
-                + "\nYou are the lead. Both auditors finished:\n"
-                + json.dumps({k: s["judge"]["report"] for k, s in stages.items()})
-            )
-            prompt += "\nSynthesize rollout/recovery actions. facts: " + ", ".join(
-                task["expected"]["lead"]
-            )
-            reply = call(prompt)
-            reply["judge"] = judge(reply["text"], task["expected"]["lead"])
-            stages["lead"] = reply
-        failures = [
-            name + ":" + failure
-            for name, s in stages.items()
-            for failure in s["judge"]["failures"]
-        ]
-        if "lead" not in stages:
-            failures.append("lead:not_run")
-    except Exception as exc:
-        stages["lead"] = {"error": str(exc), "partial": getattr(exc, "partial", None)}
-        failures = ["lead:exception"]
-    success = not failures
-    usage = [s.get("usage", {}) for s in stages.values()]
-    valid = all(
-        type(u.get("completion_tokens")) is int and u["completion_tokens"] >= 0
-        for u in usage
-    )
-    return {
-        "correct": success,
-        "failures": failures,
-        "truncated": any(s.get("finish") == "length" for s in stages.values()),
-        "wall": time.perf_counter() - started,
-        "ttft": None,
-        "usage_valid": valid,
-        "ctok": sum(u["completion_tokens"] for u in usage) if valid else None,
-        "task": {k: task[k] for k in ("id", "seed", "index", "expected")},
-        "stages": stages,
-        "concurrency": 3,
-        "external_operations": sum(
-            s.get("external_operations", 0) for s in stages.values()
-        ),
-        "engine_segments": sum(s.get("engine_segments", 0) for s in stages.values()),
-        "semantic_quality": None,
-        "quality_scope": "facts/format/typed action contract; unrestricted prose semantics ungraded",
-    }
+from bench_report import aggregate, metric_row, paired
 
 
 def main():
+    """Parse command-line options and run this module workload."""
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--arm",

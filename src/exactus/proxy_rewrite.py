@@ -1,7 +1,4 @@
-"""Pure request and response rewriting helpers for the proxy tier.
-
-Author: Olshansky Grigory
-"""
+"""Pure request and response rewriting helpers for the proxy tier."""
 
 from __future__ import annotations
 

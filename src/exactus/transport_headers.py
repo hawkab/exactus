@@ -1,15 +1,20 @@
 """Bound header parsing and retain admission ownership across disconnects."""
 
-from http.server import BaseHTTPRequestHandler
+__author__ = "Olshansky Grigory"
+
 import socket
 import threading
 import time
+from http.server import BaseHTTPRequestHandler
 
 from .transport_work import WorkLease
 
 
 class DeadlineHeaders(BaseHTTPRequestHandler):
+    """Share admission and deadline ownership across HTTP header processing."""
+
     def setup(self):
+        """Initialize socket state, ownership, and the header deadline timer."""
         super().setup()
         self._deadline = time.monotonic() + self._timeout
         self.connection.settimeout(self._timeout)
@@ -21,12 +26,14 @@ class DeadlineHeaders(BaseHTTPRequestHandler):
             self._header_timer.start()
 
     def _close_headers(self):
+        """Interrupt a connection whose header deadline has expired."""
         try:
             self.connection.shutdown(socket.SHUT_RDWR)
         except OSError:
             pass
 
     def handle(self):
+        """Handle the connection while tolerating normal disconnects and expired headers."""
         try:
             if self._admitted:
                 super().handle()
@@ -36,9 +43,10 @@ class DeadlineHeaders(BaseHTTPRequestHandler):
                     b'Connection: close\r\n\r\n{"error":"server is at capacity","error_code":"overloaded"}'
                 )
         except OSError:
-            self.close_connection = True  # normal client disconnect or header deadline
+            self.close_connection = True
 
     def finish(self):
+        """Close handler streams and release transport ownership."""
         self._header_timer.cancel()
         try:
             super().finish()

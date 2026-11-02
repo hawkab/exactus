@@ -1,23 +1,32 @@
 """Real-shaped async stream and legacy ABI tests; not GPU qualification."""
 
+__author__ = "Olshansky Grigory"
+
 import asyncio
 import os
-from types import SimpleNamespace as NS
 import unittest
+from types import SimpleNamespace as NS
 from unittest.mock import patch
 
+from exactus.adapters.default_plugin import ExactusEndpointPlugin
+from exactus.adapters.logits_state import LogitsStateError
 from exactus.adapters.native_engine import NativeEngine
 from exactus.adapters.vllm_logits import LegacyExactusLogitsProcessor
-from exactus.adapters.logits_state import LogitsStateError
-from exactus.adapters.default_plugin import ExactusEndpointPlugin
 
 
 class NativeContract(unittest.TestCase):
+    """Exercise Native Contract behavior with isolated fixtures."""
+
     def test_native_stream_token_ids_and_sampling(self):
+        """Verify native stream token ids and sampling."""
+
         class Client:
+            """Exercise Client behavior with isolated fixtures."""
+
             aborted = []
 
             async def generate(self, prompt, params, rid):
+                """Yield the configured generation result for a correlated engine request."""
                 self.received = (prompt, params, rid)
                 yield NS(finished=False, outputs=[])
                 yield NS(
@@ -32,6 +41,7 @@ class NativeContract(unittest.TestCase):
                 )
 
             async def abort(self, rid):
+                """Abort the correlated request in the qualification engine double."""
                 self.aborted.append(rid)
 
         client = Client()
@@ -46,17 +56,24 @@ class NativeContract(unittest.TestCase):
         self.assertEqual(client.aborted, [])
 
     def test_cancel_aborts_native_request(self):
+        """Verify cancel aborts native request."""
+
         class Client:
+            """Exercise Client behavior with isolated fixtures."""
+
             aborted = []
 
             async def generate(self, *args):
+                """Yield the configured generation result for a correlated engine request."""
                 await asyncio.sleep(60)
                 yield None
 
             async def abort(self, rid):
+                """Abort the correlated request in the qualification engine double."""
                 self.aborted.append(rid)
 
         async def run():
+            """Execute one synchronized workload case."""
             client = Client()
             task = asyncio.create_task(
                 NativeEngine(client, sampling_factory=lambda **kw: kw).generate(
@@ -72,20 +89,22 @@ class NativeContract(unittest.TestCase):
         asyncio.run(run())
 
     def legacy(self, speculative=None):
+        """Construct the legacy processor under the isolated runner configuration."""
         with patch.dict(os.environ, {"VLLM_USE_V2_MODEL_RUNNER": "0"}):
             return LegacyExactusLogitsProcessor(
                 NS(speculative_config=speculative), "cpu", False
             )
 
     def update(self, proc, *, size=1, added=(), removed=(), moved=()):
-        # Fields are the actual vLLM legacy BatchUpdate contract.
+        """Apply the configured legacy batch update fixture."""
         proc.update_state(NS(added=added, removed=removed, moved=moved))
 
     def test_legacy_committed_cursor_and_none_update(self):
+        """Verify legacy committed cursor and none update."""
         proc, output = self.legacy(), []
         params = NS(extra_args={"exactus_token_ids": [65, 66]})
         self.update(proc, added=[(0, params, [1], output)])
-        for _ in range(2):  # repeat apply before sampler commits must not advance
+        for _ in range(2):
             row = [[0.0] * 256]
             proc.apply(row)
             self.assertEqual(row[0][65], 0.0)
@@ -98,9 +117,10 @@ class NativeContract(unittest.TestCase):
         self.update(proc, removed=[0], added=[(0, params, [1], output)])
         row = [[0.0] * 256]
         proc.apply(row)
-        self.assertEqual(row[0][66], 0.0)  # resumed, not restarted at A
+        self.assertEqual(row[0][66], 0.0)
 
     def test_legacy_move_and_release(self):
+        """Verify legacy move and release."""
         proc = self.legacy()
         self.update(
             proc,
@@ -120,6 +140,7 @@ class NativeContract(unittest.TestCase):
         self.assertEqual(len(proc.slots), 1)
 
     def test_unsafe_runner_rejected(self):
+        """Verify unsafe runner rejected."""
         with self.assertRaises(LogitsStateError):
             self.legacy(speculative=NS(method="mtp"))
         with patch.dict(os.environ, {"VLLM_USE_V2_MODEL_RUNNER": "1"}):
@@ -127,6 +148,7 @@ class NativeContract(unittest.TestCase):
                 LegacyExactusLogitsProcessor(NS(speculative_config=None), "cpu", False)
 
     def test_zero_arg_plugin(self):
+        """Verify zero arg plugin."""
         plugin = ExactusEndpointPlugin()
         self.assertEqual(plugin.name, "exactus")
         self.assertTrue(callable(plugin.attach_router))

@@ -1,8 +1,8 @@
-"""Bounded evaluation semantics for exact integer expressions.
+"""Bounded evaluation semantics for exact integer expressions."""
 
-Author: Olshansky Grigory
-"""
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -13,8 +13,6 @@ from .grammar import GrammarParser
 from .lexer import tokenize
 from .ports import Hasher
 from .value import ComputeValue
-
-__author__ = "Olshansky Grigory"
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,8 +100,13 @@ class ExpressionEvaluator:
         if len(expression) > self._max_chars:
             raise BudgetError("expression exceeds the character budget")
         context = EvalContext(data or {}, self._hasher)
-        parser = GrammarParser(self, tokenize(expression), context,
-                              max_nodes=self._max_nodes, max_depth=self._max_depth)
+        parser = GrammarParser(
+            self,
+            tokenize(expression),
+            context,
+            max_nodes=self._max_nodes,
+            max_depth=self._max_depth,
+        )
         return ComputeValue(self.bound(parser.parse()), output_format)
 
     def bound(self, value: int) -> int:

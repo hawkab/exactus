@@ -1,12 +1,14 @@
 """Real Uvicorn/TCP C=3 and disconnect tests; no GPU/model required."""
 
+__author__ = "Olshansky Grigory"
+
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import json
 import socket
 import threading
 import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 
 from exactus.adapters.digest import HashlibHasher
 from exactus.adapters.endpoint_adapter import ExactusCoordinator
@@ -25,7 +27,10 @@ except ImportError:
 
 @unittest.skipUnless(uvicorn, "install .[server,test] for actual TCP/ASGI tests")
 class ServerLoopback(unittest.TestCase):
+    """Exercise Server Loopback behavior with isolated fixtures."""
+
     def start(self, engine):
+        """Start an isolated loopback server and register its cleanup."""
         app = FastAPI()
         attach(
             app,
@@ -61,6 +66,7 @@ class ServerLoopback(unittest.TestCase):
         self.assertTrue(server.started)
 
         def stop():
+            """Shut down the loopback server and join its serving thread."""
             server.should_exit = True
             thread.join(3)
             sock.close()
@@ -69,10 +75,15 @@ class ServerLoopback(unittest.TestCase):
         return port
 
     def test_three_requests_reach_engine_and_answers_return(self):
+        """Verify three requests reach engine and answers return."""
+
         class Engine:
+            """Exercise Engine behavior with isolated fixtures."""
+
             active = peak = 0
 
             async def generate(self, *args):
+                """Yield the configured generation result for a correlated engine request."""
                 self.active += 1
                 self.peak = max(self.peak, self.active)
                 try:
@@ -86,6 +97,7 @@ class ServerLoopback(unittest.TestCase):
         barrier = threading.Barrier(3)
 
         def request(_):
+            """Invoke one local workload while recording concurrency or response evidence."""
             barrier.wait(1)
             return request_bytes(
                 f"http://127.0.0.1:{port}/v1/exact/completions",
@@ -108,10 +120,14 @@ class ServerLoopback(unittest.TestCase):
         )
 
     def test_disconnect_cancels_inference(self):
+        """Verify disconnect cancels inference."""
         started, aborted = threading.Event(), threading.Event()
 
         class Engine:
+            """Exercise Engine behavior with isolated fixtures."""
+
             async def generate(self, *args):
+                """Yield the configured generation result for a correlated engine request."""
                 started.set()
                 try:
                     await asyncio.Event().wait()

@@ -1,9 +1,12 @@
 """Data-blind plan input view: names/shapes, not numerical or cell values."""
 
+__author__ = "Olshansky Grigory"
+
 from ..external_computers.values import packed
 
 
 def is_table(value):
+    """Recognize an explicit columns-and-rows table value."""
     if type(value) is not dict or set(value) != {"columns", "rows"}:
         return False
     columns, rows = value["columns"], value["rows"]
@@ -28,6 +31,7 @@ def has_tables(value):
 
 
 def describe(value):
+    """Describe input types and table shapes without exposing scalar cell values."""
     kind = type(value)
     if kind is dict:
         if is_table(value):
@@ -63,6 +67,7 @@ def describe(value):
 
 
 def input_view(inputs):
+    """Choose full inputs or a schema-only view for the planning prompt."""
     result = {key: describe(value) for key, value in inputs.items()}
     packed(result)
     return result

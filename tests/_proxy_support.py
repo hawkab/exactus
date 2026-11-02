@@ -1,7 +1,4 @@
-"""Shared test support: a fake OpenAI upstream and a proxy server harness.
-
-Author: Olshansky Grigory
-"""
+"""Shared test support: a fake OpenAI upstream and a proxy server harness."""
 
 from __future__ import annotations
 
@@ -89,7 +86,7 @@ class FakeUpstream:
                 try:
                     self.wfile.write(payload)
                 except OSError:
-                    pass  # cap/deadline tests deliberately close the upstream socket
+                    pass
 
             def log_message(self, *args) -> None:
                 """Silence the default access log."""

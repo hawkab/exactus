@@ -1,7 +1,5 @@
-"""Tests for the marker span protocol.
+"""Tests for the marker span protocol."""
 
-Author: Olshansky Grigory
-"""
 import unittest
 
 from exactus.domain.errors import GrammarError

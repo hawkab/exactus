@@ -1,7 +1,4 @@
-"""E2E HTTP tests for the exactus proxy transport and compute paths.
-
-Author: Olshansky Grigory
-"""
+"""E2E HTTP tests for the exactus proxy transport and compute paths."""
 
 import hashlib
 import json
@@ -10,7 +7,6 @@ import unittest
 from exactus.adapters.digest import HashlibHasher
 from exactus.adapters.in_process import InProcessExternalComputer
 from exactus.proxy import ExactusProxy
-
 from tests._proxy_support import FakeUpstream, call_json, proxy_server
 
 __author__ = "Olshansky Grigory"

@@ -1,7 +1,4 @@
-"""Shape-only batch and speculative layout tests for logits forcing.
-
-Author: Olshansky Grigory
-"""
+"""Shape-only batch and speculative layout tests for logits forcing."""
 
 import unittest
 from collections.abc import Sequence

@@ -105,8 +105,22 @@ qualification on the exact runtime; arithmetic HTTP results do not establish the
 
 ## Validation
 
-`pip install '.[server,test]'` then
-`python -m unittest discover -s tests -t .`.
+Install development dependencies and run the checks:
+
+```bash
+pip install -e '.[server,test,dev]'
+ruff check .
+ruff format --check .
+python tools/validate_sources.py
+python -m unittest discover -s tests -t .
+```
+
+Classes and functions use Python docstrings; each Python module declares
+`__author__ = "Olshansky Grigory"`. The source validator checks documentation,
+authorship, syntax, and inward dependencies: domain and application code do not
+depend on concrete adapters. Files over 200 lines are reported as refactoring
+candidates.
+
 Benchmark sources are in `benchmarks/`; runtime manifests and measurement
 artifacts stay outside git. `bench_external_computers.py --help` describes the paired
 workflow and idle gates; `--replay RAW.jsonl` accounts for all launched work,

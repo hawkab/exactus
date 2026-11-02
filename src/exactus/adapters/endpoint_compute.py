@@ -1,14 +1,18 @@
 """One bounded CPU stage per segment: parse, batch compute, tokenize and finalize."""
 
+__author__ = "Olshansky Grigory"
+
 from dataclasses import dataclass
 
 from ..application.evaluate import evaluate_spans
 from ..domain.finalization import finalize, validate_final
-from .dispatch import find_expression, external_computer_answer
+from .dispatch import external_computer_answer, find_expression
 
 
 @dataclass(slots=True)
 class Stage:
+    """Describe computed tokens and an optional finalized segment answer."""
+
     known: int
     prefill: int
     final: bool
@@ -27,8 +31,14 @@ def compute_segment(
     mode,
     task_prompt,
 ):
+    """Validate a complete segment before evaluating spans or injecting results.
+
+    One CPU stage handles a model segment. A single encoding of all result
+    frames preserves BPE boundaries. Prompt-derived fallback values count toward
+    returned known tokens even when the model emitted no final marker.
+    """
     fresh_spans = machine.feed(segment.text)
-    parsed = machine.finish()  # validate boundary BEFORE computation or injection
+    parsed = machine.finish()
     validate_final(parsed, "preserve-text")
     fresh = (
         evaluate_spans(
@@ -61,7 +71,7 @@ def compute_segment(
             external_computer_result=external_computer_result,
             prompt=task_prompt or "",
         )
-        # A fallback from the external computer also produces returned known digits.
+
         if answer[2] and not final:
             known += len(tokenizer.encode(answer[0]))
         return Stage(known, 0, final, answer)
@@ -70,7 +80,7 @@ def compute_segment(
         ids = tokenizer.encode(segment.text)
     tokens.extend(ids)
     count = len(ids)
-    # A single encoding preserves BPE boundaries between result frames.
+
     injection = "".join(f"<calc-result>{op.value}</calc-result>\n" for op in fresh)
     ids = tokenizer.encode(injection)
     tokens.extend(ids)

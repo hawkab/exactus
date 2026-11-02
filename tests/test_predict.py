@@ -1,7 +1,5 @@
-"""Tests for the hash-indexed n-gram draft predictor.
+"""Tests for the hash-indexed n-gram draft predictor."""
 
-Author: Olshansky Grigory
-"""
 import unittest
 
 from exactus.adapters.ngram import NgramDraftPredictor

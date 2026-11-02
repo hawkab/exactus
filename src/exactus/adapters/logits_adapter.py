@@ -1,20 +1,15 @@
-"""vLLM logits-processor adapter enforcing computed spans token-exactly.
-
-Author: Olshansky Grigory
-"""
+"""vLLM logits-processor adapter enforcing computed spans token-exactly."""
 
 from __future__ import annotations
 
+__author__ = "Olshansky Grigory"
+
 from collections.abc import MutableSequence
-import math
 
 from ..domain.ports import Tokenizer
 from .logits_audit import audit_snapshot
+from .logits_rows import _force_row, _validate_row
 from .logits_state import DEFAULT_REQUEST_ID, ForcingState, LogitsStateError, batch_rows
-
-__author__ = "Olshansky Grigory"
-
-_FLOOR = float("-inf")
 
 
 class ExactusLogitsProcessor:
@@ -47,6 +42,7 @@ class ExactusLogitsProcessor:
         self._steps = 0
 
     def _snapshot(self, row, vocab):
+        """Collect an optional diagnostic snapshot under the configured sampling policy."""
         attempted = self._audit_mode == "full" or (
             self._audit_mode == "sampled" and self._steps % self._audit_every == 0
         )
@@ -162,8 +158,7 @@ class ExactusLogitsProcessor:
                 self._state.mark_guard_failure(exc, request_id)
                 raise LogitsStateError("forcing validation failed for request") from exc
             targets.append((request_id, row, target, vocab))
-        # Validate every row before mutation, and commit cursors only after ALL
-        # mutations succeed. A device/kernel fault aborts only this affected batch.
+
         snapshots = [self._snapshot(row, vocab) for _, row, _, vocab in targets]
         try:
             for _, row, target, vocab in targets:
@@ -180,27 +175,6 @@ class ExactusLogitsProcessor:
             self._state.record(request_id, target, snapshot, attempted)
             self._state.advance(request_id)
         return batch
-
-
-def _validate_row(row, target):
-    if not hasattr(row, "__setitem__"):
-        raise TypeError("score row is immutable")
-    if not math.isfinite(float(row[target])):
-        raise LogitsStateError(
-            "forced token conflicts with an existing mask or invalid logits"
-        )
-
-
-def _force_row(row, target: int, vocab: int, *, validated=False) -> None:
-    """Pin a row; mask validation must never be removed for performance."""
-    if not validated:
-        _validate_row(row, target)
-    if hasattr(row, "fill_"):
-        row.fill_(_FLOOR)
-    else:
-        for index in range(vocab):
-            row[index] = _FLOOR
-    row[target] = 0.0
 
 
 def build_vllm_processor(*args, **kwargs):

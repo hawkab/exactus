@@ -1,9 +1,12 @@
 """One bounded batch, including adapters that have no batch-capable external computer."""
 
-from .compute import Operation, ComputeError
+__author__ = "Olshansky Grigory"
+
+from .compute import ComputeError, Operation
 
 
 def evaluate_spans(external_computer, spans, data=None, *, output_format="dec"):
+    """Evaluate parsed spans in one batch when the external-computer port supports it."""
     batch = getattr(external_computer, "evaluate_many", None)
     if callable(batch):
         values = batch([s.expression for s in spans], data, output_format=output_format)

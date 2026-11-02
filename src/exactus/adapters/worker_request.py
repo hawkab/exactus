@@ -1,5 +1,7 @@
 """Thread-neutral request data handles; no lock is held while the LLM runs."""
 
+__author__ = "Olshansky Grigory"
+
 from uuid import uuid4
 
 from ..domain.errors import ExactusError, WorkerError
@@ -7,13 +9,17 @@ from .worker_session import encode_data
 
 
 class WorkerRequest:
+    """Own request-scoped data across thread-neutral worker exchanges."""
+
     __slots__ = ("_external_computer", "_data", "_key", "_process", "_closed")
 
     def __init__(self, external_computer, data):
+        """Initialize Worker Request state and dependencies."""
         self._external_computer, self._data = external_computer, encode_data(data or {})
         self._key, self._process, self._closed = uuid4().hex, None, False
 
     def evaluate_many(self, expressions, data=None, *, output_format="dec"):
+        """Evaluate a batch using one cached data binding and preserve typed failures."""
         if isinstance(expressions, (str, bytes)):
             raise ExactusError("expression batch must be a sequence of expressions")
         if data is not None:
@@ -45,9 +51,7 @@ class WorkerRequest:
             )
             try:
                 if not reply.get("ok"):
-                    external_computer._decode(
-                        reply
-                    )  # preserve typed arithmetic failures
+                    external_computer._decode(reply)
                 rows = reply.get("values")
                 if (
                     not isinstance(rows, list)
@@ -58,22 +62,22 @@ class WorkerRequest:
                     raise WorkerError("worker returned an invalid batch")
                 return [external_computer._decode({"ok": True, **row}) for row in rows]
             finally:
-                # Failed batches also consume the process-lifetime budget.
                 external_computer._calls += len(expressions)
                 if external_computer._calls >= external_computer._max_calls:
                     external_computer._close_locked()
 
     def evaluate(self, expression, data=None, *, output_format="dec"):
+        """Evaluate one expression through the request-scoped batch interface."""
         return self.evaluate_many((expression,), data, output_format=output_format)[0]
 
     def close(self):
+        """Discard request data without spawning a dead or recycled worker."""
         external_computer = self._external_computer
         with external_computer._lock:
             if self._closed:
                 return
             self._closed = True
             try:
-                # Never start a dead/recycled child just to delete stale state.
                 if (
                     external_computer._proc is self._process
                     and self._process is not None
@@ -90,9 +94,11 @@ class WorkerRequest:
                 self._data.clear()
 
     def __enter__(self):
+        """Enter this managed context and return its active resource."""
         if self._closed:
             raise ExactusError("worker request is closed")
         return self
 
     def __exit__(self, *exc):
+        """Release owned resources when leaving the managed context."""
         self.close()

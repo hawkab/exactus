@@ -1,9 +1,8 @@
-"""Command line interface for the Exactus external computer.
-
-Author: Olshansky Grigory
-"""
+"""Command line interface for the Exactus external computer."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 import argparse
 import base64
@@ -14,8 +13,6 @@ from ..domain.errors import ExactusError
 from .digest import HashlibHasher
 from .in_process import InProcessExternalComputer
 from .worker import WorkerExternalComputer
-
-__author__ = "Olshansky Grigory"
 
 
 def main(argv: list[str] | None = None) -> int:

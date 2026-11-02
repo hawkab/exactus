@@ -1,18 +1,20 @@
 """ASGI deadlines retain ownership of non-cancellable CPU work."""
 
+__author__ = "Olshansky Grigory"
+
 import asyncio
 import json
-import time
 import threading
+import time
 import unittest
 
+from exactus.adapters.async_work import blocking
 from exactus.adapters.digest import HashlibHasher
-from exactus.adapters.in_process import InProcessExternalComputer
 from exactus.adapters.endpoint_adapter import ExactusCoordinator
 from exactus.adapters.endpoint_route import attach
+from exactus.adapters.in_process import InProcessExternalComputer
 from exactus.adapters.tokenizer import ByteTokenizer
 from exactus.domain.ports import Segment
-from exactus.adapters.async_work import blocking
 
 try:
     from fastapi import FastAPI
@@ -21,10 +23,12 @@ except ImportError:
 
 
 async def post(app, *, upload_delay=0):
+    """Send a request to the local test endpoint and capture its result."""
     body = json.dumps({"prompt": "p", "exact_compute": True}).encode()
     response, pending = [], [body]
 
     async def receive():
+        """Provide the next request or disconnect event to the ASGI application."""
         await asyncio.sleep(upload_delay)
         return {
             "type": "http.request",
@@ -33,6 +37,7 @@ async def post(app, *, upload_delay=0):
         }
 
     async def send(message):
+        """Capture ASGI response events for the transport assertions."""
         response.append(message)
 
     await app(
@@ -60,9 +65,16 @@ async def post(app, *, upload_delay=0):
 
 @unittest.skipUnless(FastAPI, "server extra is not installed")
 class EndpointLimits(unittest.TestCase):
+    """Exercise Endpoint Limits behavior with isolated fixtures."""
+
     def app(self, external_computer):
+        """Create the local endpoint application for this isolated regression."""
+
         class Engine:
+            """Exercise Engine behavior with isolated fixtures."""
+
             async def generate(self, *args):
+                """Yield the configured generation result for a correlated engine request."""
                 text = "<calc-final>2+3</calc-final>"
                 return Segment(text, tuple(text.encode()), len(text), "stop")
 
@@ -77,7 +89,10 @@ class EndpointLimits(unittest.TestCase):
         return app
 
     def test_deadline_covers_upload(self):
+        """Verify deadline covers upload."""
+
         async def run():
+            """Execute one synchronized workload case."""
             app = self.app(InProcessExternalComputer(HashlibHasher()))
             self.assertEqual(await post(app, upload_delay=0.2), 504)
             await asyncio.sleep(0.01)
@@ -86,16 +101,22 @@ class EndpointLimits(unittest.TestCase):
         asyncio.run(run())
 
     def test_timeout_does_not_free_running_thread(self):
+        """Verify timeout does not free running thread."""
+
         class ExternalComputer:
+            """Exercise External Computer behavior with isolated fixtures."""
+
             delay = 0.2
 
             def evaluate(self, *args, **kwargs):
+                """Evaluate or deliberately reject the requested expression in this isolated test double."""
                 time.sleep(self.delay)
                 return InProcessExternalComputer(HashlibHasher()).evaluate(
                     *args, **kwargs
                 )
 
         async def run():
+            """Execute one synchronized workload case."""
             external_computer = ExternalComputer()
             app = self.app(external_computer)
             self.assertEqual(await post(app), 504)
@@ -107,10 +128,14 @@ class EndpointLimits(unittest.TestCase):
         asyncio.run(run())
 
     def test_repeated_cancellation_still_drains_thread(self):
+        """Verify repeated cancellation still drains thread."""
+
         async def run():
+            """Execute one synchronized workload case."""
             started, release = threading.Event(), threading.Event()
 
             def slow():
+                """Simulate blocking computation that remains active after transport cancellation."""
                 started.set()
                 release.wait(2)
 

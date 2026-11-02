@@ -1,5 +1,7 @@
 """External computer CPU probe via PYTHONPATH; no model calls."""
 
+__author__ = "Olshansky Grigory"
+
 import argparse
 import json
 import statistics
@@ -9,14 +11,13 @@ from exactus.adapters.worker import WorkerExternalComputer
 
 
 def main():
+    """Parse command-line options and run this module workload."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n", type=int, default=300)
     args = parser.parse_args()
     if args.n < 10:
         parser.error("n >= 10 required")
-    worker = (
-        WorkerExternalComputer()
-    )  # actual recycle policy, not an infinite warm worker
+    worker = WorkerExternalComputer()
     try:
         worker.evaluate("17*19")
         latencies = []

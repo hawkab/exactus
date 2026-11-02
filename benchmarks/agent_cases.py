@@ -5,6 +5,8 @@ source records, then lead synthesizes an actionable decision using their outputs
 The rubric checks facts and safety decisions, not unrestricted reasoning quality.
 """
 
+__author__ = "Olshansky Grigory"
+
 import json
 import random
 
@@ -15,6 +17,7 @@ except ImportError:
 
 
 def case(index, seed=20261030):
+    """Generate a reproducible workload and independently specified expected facts."""
     rng = random.Random(seed + index)
     window, requests, tokens = 300, rng.randint(30, 110), rng.randint(400, 1000)
     rates = [rng.randint(110, 150), rng.randint(110, 150)]
@@ -114,6 +117,7 @@ def case(index, seed=20261030):
 
 
 def judge(text, expected):
+    """Check exact facts, response format, and typed action requirements."""
     content = text.strip()
     if content.startswith("```json") and content.endswith("```"):
         content = content[7:-3].strip()

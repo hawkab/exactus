@@ -1,12 +1,15 @@
 """One cancellable absolute deadline for headers, bodies and streamed lines."""
 
-from contextlib import contextmanager
-from contextvars import ContextVar
-from http.client import HTTPConnection, HTTPSConnection, HTTPException
+__author__ = "Olshansky Grigory"
+
 import socket
 import threading
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
+from http.client import HTTPConnection, HTTPException, HTTPSConnection
 from urllib.parse import urlsplit
+
 from .cancellation import current as current_cancellation
 
 deadline = ContextVar("exactus_http_deadline", default=None)
@@ -15,6 +18,7 @@ MAX_REPLY = 1048576
 
 @contextmanager
 def open_response(url, body=None, *, method="POST", headers=None, timeout=60.0):
+    """Open an HTTP response with shared cancellation and an absolute deadline."""
     target = urlsplit(url)
     if (
         target.scheme not in ("http", "https")
@@ -32,6 +36,7 @@ def open_response(url, body=None, *, method="POST", headers=None, timeout=60.0):
     active = [None]
 
     def interrupt():
+        """Interrupt the active connection without allowing an automatic reconnect."""
         sock = active[0] or connection.sock
         if sock is not None:
             try:
@@ -48,9 +53,7 @@ def open_response(url, body=None, *, method="POST", headers=None, timeout=60.0):
         if cancellation is not None:
             cancellation.register(interrupt)
         connection.connect()
-        connection.auto_open = (
-            0  # cancellation must never trigger an automatic reconnect
-        )
+        connection.auto_open = 0
         active[0] = connection.sock
         if cancellation is not None:
             cancellation.check()
@@ -72,6 +75,7 @@ def open_response(url, body=None, *, method="POST", headers=None, timeout=60.0):
 
 
 def _remaining(sock, end):
+    """Return the remaining request time or raise after the deadline."""
     remaining = end - time.monotonic()
     if remaining <= 0:
         raise TimeoutError("upstream deadline exceeded")
@@ -81,6 +85,7 @@ def _remaining(sock, end):
 def request_bytes(
     url, body=None, *, method="POST", headers=None, timeout=60.0, limit=MAX_REPLY
 ):
+    """Read a response body while enforcing the caller transport contract."""
     with open_response(url, body, method=method, headers=headers, timeout=timeout) as (
         reply,
         sock,
@@ -110,6 +115,7 @@ def request_bytes(
 def stream_lines(
     url, body, *, headers=None, timeout=300.0, limit=2097152, line_limit=65536
 ):
+    """Yield complete response lines while retaining cancellation and deadline ownership."""
     with open_response(url, body, headers=headers, timeout=timeout) as (
         reply,
         sock,

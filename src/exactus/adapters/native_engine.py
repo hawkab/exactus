@@ -1,5 +1,7 @@
 """AsyncLLM Engine port using token IDs, normal prefill and engine-owned MTP."""
 
+__author__ = "Olshansky Grigory"
+
 import inspect
 
 from ..domain.ports import Segment
@@ -8,7 +10,10 @@ from .engine_client import EngineError
 
 
 class NativeTokenizer:
+    """Adapt the installed model tokenizer and chat template to Exactus ports."""
+
     def __init__(self, tokenizer, *, chat_template=None, template_kwargs=None):
+        """Initialize Native Tokenizer state and dependencies."""
         self.inner = tokenizer
         self.chat_template, self.template_kwargs = (
             chat_template,
@@ -16,13 +21,16 @@ class NativeTokenizer:
         )
 
     def encode(self, text):
+        """Encode plain text without adding special tokens."""
         ids = self.inner.encode(text, add_special_tokens=False)
         return ids if isinstance(ids, list) else list(ids)
 
     def decode(self, ids):
+        """Decode token identifiers while preserving special tokens."""
         return self.inner.decode(ids, skip_special_tokens=False)
 
     def encode_prompt(self, text):
+        """Format a user prompt through the model chat template."""
         return self.encode_messages(
             [
                 {"role": "system", "content": MARKER_HINT},
@@ -31,6 +39,7 @@ class NativeTokenizer:
         )
 
     def encode_messages(self, messages):
+        """Encode chat messages using the configured template and template arguments."""
         kwargs = {
             **self.template_kwargs,
             "tokenize": True,
@@ -51,10 +60,12 @@ class NativeEngine:
     """
 
     def __init__(self, client, *, context_limit=None, sampling_factory=None):
+        """Initialize Native Engine state and dependencies."""
         self.client, self.context_limit = client, context_limit
         self._sampling_factory = sampling_factory
 
     async def generate(self, prompt_ids, max_tokens, request_id):
+        """Generate one native segment with engine-owned sampling and request correlation."""
         factory = self._sampling_factory
         if factory is None:
             from vllm import SamplingParams
@@ -63,7 +74,7 @@ class NativeEngine:
             factory = SamplingParams
             output_kind = RequestOutputKind.FINAL_ONLY
         else:
-            output_kind = 2  # contract doubles; real vLLM factory above uses its enum
+            output_kind = 2
         params = factory(
             max_tokens=max_tokens,
             temperature=0,

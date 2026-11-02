@@ -11,13 +11,16 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.12"]
-        install: [".", ".[server,test]"]
+        install: [".[dev]", ".[server,test,dev]"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e "${{ matrix.install }}"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: python tools/validate_sources.py
       - run: python -m unittest discover -s tests -t .
       - run: python benchmarks/bench_compute.py 2
       - run: python benchmarks/bench_predict.py

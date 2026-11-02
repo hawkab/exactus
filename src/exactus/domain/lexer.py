@@ -1,14 +1,12 @@
-"""Tokenizer for exact integer expression source code.
+"""Tokenizer for exact integer expression source code."""
 
-Author: Olshansky Grigory
-"""
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 from dataclasses import dataclass
 
 from .errors import GrammarError
-
-__author__ = "Olshansky Grigory"
 
 _TWO_CHAR = ("**", "//", "<<", ">>")
 _ONE_CHAR = "+-*/%^&|~(),"
@@ -77,7 +75,9 @@ def _scan_number(source: str, start: int, tokens: list[Token]) -> int:
     return i
 
 
-def _scan_prefixed(source: str, start: int, alphabet: str, base: int, tokens: list[Token]) -> int:
+def _scan_prefixed(
+    source: str, start: int, alphabet: str, base: int, tokens: list[Token]
+) -> int:
     """Scan the body of a 0x/0b literal and append its INT token."""
     i, plain = start, False
     while i < len(source) and (source[i] in alphabet or source[i] == "_"):
@@ -87,7 +87,9 @@ def _scan_prefixed(source: str, start: int, alphabet: str, base: int, tokens: li
         i += 1
     if not plain:
         raise GrammarError("number literal has no digits")
-    tokens.append(Token("INT", source[start - 2 : i], int(source[start:i].replace("_", ""), base)))
+    tokens.append(
+        Token("INT", source[start - 2 : i], int(source[start:i].replace("_", ""), base))
+    )
     return i
 
 

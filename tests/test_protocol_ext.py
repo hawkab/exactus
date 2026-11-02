@@ -1,7 +1,4 @@
-"""Extended protocol framing and coordinator behaviour tests.
-
-Author: Olshansky Grigory
-"""
+"""Extended protocol framing and coordinator behaviour tests."""
 
 import asyncio
 import random

@@ -1,7 +1,5 @@
-"""Tests for the bounded expression evaluator.
+"""Tests for the bounded expression evaluator."""
 
-Author: Olshansky Grigory
-"""
 import unittest
 
 from exactus.domain.errors import BudgetError, DataError, GrammarError

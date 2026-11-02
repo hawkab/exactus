@@ -1,7 +1,5 @@
-"""Tests for digest algorithms in the hashing adapter.
+"""Tests for digest algorithms in the hashing adapter."""
 
-Author: Olshansky Grigory
-"""
 import unittest
 
 from exactus.adapters.digest import HashlibHasher
@@ -19,13 +17,16 @@ class TestHashlibHasher(unittest.TestCase):
     def test_sha256_vector(self):
         """The sha256 digest of abc matches the NIST vector."""
         digest = self.hasher.digest("sha256", b"abc")
-        self.assertEqual(hex(digest),
-                         "0xba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+        self.assertEqual(
+            hex(digest),
+            "0xba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        )
 
     def test_md5_vector(self):
         """The md5 digest of abc matches the RFC vector."""
-        self.assertEqual(hex(self.hasher.digest("md5", b"abc")),
-                         "0x900150983cd24fb0d6963f7d28e17f72")
+        self.assertEqual(
+            hex(self.hasher.digest("md5", b"abc")), "0x900150983cd24fb0d6963f7d28e17f72"
+        )
 
     def test_crc32_vector(self):
         """The crc32 checksum of 123456789 matches the check value."""
@@ -33,7 +34,14 @@ class TestHashlibHasher(unittest.TestCase):
 
     def test_sha3_and_blake2_present(self):
         """Modern algorithms are available and produce integer digests."""
-        for name in ("sha3_256", "sha3_512", "blake2b", "blake2s", "shake_128", "shake_256"):
+        for name in (
+            "sha3_256",
+            "sha3_512",
+            "blake2b",
+            "blake2s",
+            "shake_128",
+            "shake_256",
+        ):
             self.assertIsInstance(self.hasher.digest(name, b"x"), int)
 
     def test_algorithm_list(self):

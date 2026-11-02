@@ -1,15 +1,12 @@
-"""Speculative draft suggestions from an external predictor.
-
-Author: Olshansky Grigory
-"""
+"""Speculative draft suggestions from an external predictor."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 from collections.abc import Sequence
 
 from ..domain.ports import Candidate, DraftPredictor
-
-__author__ = "Olshansky Grigory"
 
 
 class DraftService:

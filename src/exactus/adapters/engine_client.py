@@ -1,9 +1,8 @@
-"""OpenAI-compatible HTTP client implementing the engine port.
-
-Author: Olshansky Grigory
-"""
+"""OpenAI-compatible HTTP client implementing the engine port."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 import json
 from collections.abc import Sequence
@@ -11,10 +10,8 @@ from collections.abc import Sequence
 from ..domain.errors import ExactusError
 from ..domain.ports import Segment, Tokenizer
 from ..domain.protocol import SpanMachine
-from .async_work import blocking
 from ..http_io import request_bytes
-
-__author__ = "Olshansky Grigory"
+from .async_work import blocking
 
 
 class EngineError(ExactusError):
@@ -70,6 +67,7 @@ class EngineClient:
         return await blocking(self._generate, prompt_ids, max_tokens, request_id)
 
     def _generate(self, prompt_ids, max_tokens, request_id):
+        """Drain one engine segment while preserving cancellation and token provenance."""
         payload = self._payload(self._decode(prompt_ids), max_tokens)
         return self._segment(self._post(payload, request_id))
 

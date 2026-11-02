@@ -1,10 +1,14 @@
 """Incremental bounded marker parsing; offsets are reused by every renderer."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
+
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from io import StringIO
-import re
+
 from .errors import BudgetError, GrammarError
 
 SPAN_RE = re.compile(
@@ -21,6 +25,8 @@ MAX_TRANSCRIPT, MAX_OPERATIONS = 262144, 128
 
 @dataclass(frozen=True, slots=True)
 class Span:
+    """Record one parsed expression, its final marker, and source offsets."""
+
     expression: str
     final: bool
     start: int = field(default=0, compare=False)
@@ -35,6 +41,7 @@ class ParsedTranscript:
     spans: tuple[Span, ...]
 
     def render(self, values: Sequence[str], *, marks: bool = False) -> str:
+        """Replace validated spans using their stored offsets without reparsing text."""
         if len(values) != len(self.spans):
             raise GrammarError("computed values do not match transcript spans")
         parts, last = [], 0
@@ -47,16 +54,18 @@ class ParsedTranscript:
 
 
 def parse(content: str) -> ParsedTranscript:
+    """Parse a complete transcript and reject incomplete or malformed frames."""
     machine = SpanMachine()
     machine.feed(content)
     return machine.finish()
 
 
 def _tag_at(text: str, pos: int) -> tuple[str | None, bool]:
+    """Recognize a full marker or a bounded partial-marker suffix."""
     for tag in _TAGS:
         if text.startswith(tag, pos):
             return tag, False
-    # Only a bounded suffix can be a partial tag. Never copy a growing tail.
+
     if len(text) - pos < _MAX_TAG:
         tail = text[pos:]
         return None, any(tag.startswith(tail) for tag in _TAGS)
@@ -79,12 +88,14 @@ class SpanMachine:
     )
 
     def __init__(self):
+        """Initialize Span Machine state and dependencies."""
         self._text, self._length = StringIO(), 0
         self._pending, self._open, self._start = "", None, 0
         self._expr, self._found = [], []
         self._parsed, self._fault = None, None
 
     def feed(self, chunk: str) -> list[Span]:
+        """Accept a text chunk and retain any protocol fault for subsequent calls."""
         if self._fault is not None:
             raise self._fault
         try:
@@ -94,6 +105,7 @@ class SpanMachine:
             raise
 
     def _feed(self, chunk: str) -> list[Span]:
+        """Scan new chunks and bounded marker tails while preserving source offsets."""
         if not isinstance(chunk, str):
             raise GrammarError("stream chunks must be text")
         if self._length + len(chunk) > MAX_TRANSCRIPT:
@@ -104,8 +116,7 @@ class SpanMachine:
         text, self._pending = self._pending + chunk, ""
         self._parsed = None
         old_count, run_start = len(self._found), 0
-        # The C scanner skips ordinary '<' and shifts without per-character
-        # Python calls. Only complete tags and one bounded tail need handling.
+
         for match in _FULL_TAG.finditer(text):
             cut, tag = match.start(), match.group()
             if self._open is None:
@@ -142,23 +153,29 @@ class SpanMachine:
         return self._found[old_count:]
 
     def transcript(self) -> str:
+        """Return all text received by the parser."""
         return self._text.getvalue()
 
     def spans(self) -> list[Span]:
+        """Return a copy of the complete expression spans found so far."""
         return self._found.copy()
 
     def has_open_frame(self) -> bool:
+        """Report whether an operation frame is still open."""
         return self._open is not None
 
     def has_pending_tag(self) -> bool:
+        """Report whether the stream ends with a partial marker."""
         return bool(self._pending)
 
     def pending_close(self) -> str | None:
+        """Return the closing marker required by the currently open frame."""
         if self._open is None:
             return None
         return "</calc>" if self._open == "<calc>" else "</calc-final>"
 
     def finish(self) -> ParsedTranscript:
+        """Validate the final parser state and reuse its immutable parsed transcript."""
         if self._fault is not None:
             raise self._fault
         if self._open is not None:
@@ -170,4 +187,5 @@ class SpanMachine:
         return self._parsed
 
     def render(self, values: Sequence[str]) -> str:
+        """Render computed values through the validated transcript snapshot."""
         return self.finish().render(values)

@@ -6,12 +6,14 @@ candidate files, instantiate an LLM, create CUDA tensors or change service state
 The bootstrap provides ``archive`` (tarfile.TarFile backed by BytesIO).
 """
 
+__author__ = "Olshansky Grigory"
+
 import asyncio
 import importlib.abc
 import importlib.metadata
 import importlib.util
-import json
 import inspect
+import json
 import os
 import sys
 from types import SimpleNamespace as NS
@@ -20,8 +22,8 @@ archive = globals().get("archive")
 if archive is None:
     import argparse
     import io
-    from pathlib import Path
     import tarfile
+    from pathlib import Path
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-tar", type=Path, required=True)
@@ -32,7 +34,10 @@ if archive is None:
 
 
 class Candidate(importlib.abc.MetaPathFinder, importlib.abc.Loader):
+    """Load candidate package modules directly from an in-memory source archive."""
+
     def find_spec(self, name, path=None, target=None):
+        """Locate a candidate module in the source archive without extracting files."""
         if name != "exactus" and not name.startswith("exactus."):
             return None
         prefix = "src/" + name.replace(".", "/")
@@ -47,9 +52,11 @@ class Candidate(importlib.abc.MetaPathFinder, importlib.abc.Loader):
         return None
 
     def create_module(self, spec):
+        """Use the default module allocation for the candidate source loader."""
         return None
 
     def exec_module(self, module):
+        """Compile archived module source into its allocated module namespace."""
         path = module.__spec__.loader_state
         module.__file__ = "<candidate>/" + path
         exec(
@@ -58,7 +65,6 @@ class Candidate(importlib.abc.MetaPathFinder, importlib.abc.Loader):
         )
 
 
-# Only this short-lived qualification process is changed, never the live server.
 os.environ["VLLM_PLUGINS"] = ""
 os.environ["VLLM_USE_V2_MODEL_RUNNER"] = "0"
 sys.meta_path.insert(0, Candidate())
@@ -68,8 +74,9 @@ from vllm import SamplingParams
 from vllm.plugins.endpoint_plugins.interface import EndpointPlugin
 from vllm.sampling_params import RequestOutputKind
 from vllm.v1.sample.logits_processor.interface import BatchUpdate
-from exactus.adapters.default_plugin import ExactusEndpointPlugin
+
 from exactus import __version__
+from exactus.adapters.default_plugin import ExactusEndpointPlugin
 from exactus.adapters.native_engine import NativeEngine
 from exactus.adapters.vllm_logits import LegacyExactusLogitsProcessor
 
@@ -97,7 +104,10 @@ for token in (1, 2):
 
 
 class Client:
+    """Provide a deterministic asynchronous engine double for installed-runtime qualification."""
+
     async def generate(self, prompt, params, rid):
+        """Yield the configured generation result for a correlated engine request."""
         assert isinstance(params, SamplingParams)
         assert params.output_kind == RequestOutputKind.FINAL_ONLY
         assert params.include_stop_str_in_output
@@ -113,6 +123,7 @@ class Client:
         )
 
     async def abort(self, rid):
+        """Abort the correlated request in the qualification engine double."""
         raise AssertionError("unexpected abort")
 
 

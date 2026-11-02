@@ -1,7 +1,4 @@
-"""Exception hierarchy for the Exactus domain.
-
-Author: Olshansky Grigory
-"""
+"""Exception hierarchy for the Exactus domain."""
 
 from __future__ import annotations
 

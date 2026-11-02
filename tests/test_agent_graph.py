@@ -1,11 +1,13 @@
 """DAG scheduling and rubric smoke, not a model quality/performance result."""
 
+__author__ = "Olshansky Grigory"
+
 import json
-from pathlib import Path
 import sys
 import threading
 import time
 import unittest
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "benchmarks"))
 from agent_cases import case, judge
@@ -13,13 +15,17 @@ from bench_agent_graph import run_graph
 
 
 class AgentGraph(unittest.TestCase):
+    """Exercise Agent Graph behavior with isolated fixtures."""
+
     def test_real_dependencies_and_three_concurrent_requests(self):
+        """Verify real dependencies and three concurrent requests."""
         task = case(0)
         lock = threading.Lock()
         active = peak = 0
         calls = []
 
         def request(prompt):
+            """Invoke one local workload while recording concurrency or response evidence."""
             nonlocal active, peak
             with lock:
                 active += 1
@@ -72,6 +78,7 @@ class AgentGraph(unittest.TestCase):
         )
 
     def test_no_synthesis_of_failed_audits(self):
+        """Verify no synthesis of failed audits."""
         result = run_graph(
             case(1), lambda prompt: {"text": "{}", "usage": {}, "wall": 0}
         )
@@ -80,6 +87,7 @@ class AgentGraph(unittest.TestCase):
         self.assertIn("lead:not_run", result["failures"])
 
     def test_bool_not_accepted_as_integer_and_wrong_decisions_fail(self):
+        """Verify bool not accepted as integer and wrong decisions fail."""
         report = {
             "facts": {"value": True},
             "analysis": "A sufficiently detailed operational analysis.",

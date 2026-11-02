@@ -1,7 +1,4 @@
-"""Limit and refusal tests for the exactus proxy HTTP transport.
-
-Author: Olshansky Grigory
-"""
+"""Limit and refusal tests for the exactus proxy HTTP transport."""
 
 import json
 import threading
@@ -11,7 +8,6 @@ import unittest
 from exactus.adapters.digest import HashlibHasher
 from exactus.adapters.in_process import InProcessExternalComputer
 from exactus.proxy import ExactusProxy
-
 from tests._proxy_support import FakeUpstream, call, call_json, proxy_server
 
 __author__ = "Olshansky Grigory"

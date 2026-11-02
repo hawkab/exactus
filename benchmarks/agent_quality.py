@@ -1,5 +1,7 @@
 """Finite typed action contract. Does not grade unrestricted prose semantics."""
 
+__author__ = "Olshansky Grigory"
+
 ACTIONS = frozenset(
     {
         "retain_pending",
@@ -21,6 +23,7 @@ ACTION_HINT = (
 
 
 def action_contract(actions, required=()):
+    """Validate action objects and required operational decisions."""
     if type(actions) is not list or not 1 <= len(actions) <= len(ACTIONS):
         return False
     kinds = []

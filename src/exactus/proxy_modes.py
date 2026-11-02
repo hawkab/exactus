@@ -1,11 +1,9 @@
-"""Request modes, control fields and exact-answer finalization.
-
-Author: Olshansky Grigory
-"""
+"""Request modes, control fields and exact-answer finalization."""
 
 from __future__ import annotations
 
-import base64
+__author__ = "Olshansky Grigory"
+
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -14,35 +12,18 @@ from .domain.audit import Proof, SpanProof
 from .domain.errors import ExactusError
 from .domain.finalization import finalize, validate_final
 from .domain.protocol import SpanMachine
-
-__author__ = "Olshansky Grigory"
+from .proxy_data import CONTROL_FIELDS as CONTROL_FIELDS
+from .proxy_data import decode_data as decode_data
+from .proxy_data import split_payload as split_payload
+from .request_errors import (
+    RequestError as RequestError,
+)
+from .request_errors import (
+    as_request_error as as_request_error,
+)
 
 MODES = ("numeric-final", "preserve-text", "strict", "audit")
 DEFAULT_MODE = "preserve-text"
-CONTROL_FIELDS = frozenset({"data", "mode"})
-_MAX_PAYLOADS = 64
-_MAX_PAYLOAD_BYTES = 256 * 1024
-_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,63}\Z")
-_ERROR_CODES = {
-    "GrammarError": "grammar_error",
-    "BudgetError": "budget_error",
-    "DataError": "data_error",
-    "FormatError": "format_error",
-}
-
-
-class RequestError(ExactusError):
-    """Request-level failure carrying a machine-readable code and status."""
-
-    def __init__(self, message: str, error_code: str, status: int = 422) -> None:
-        """Store the message, the machine-readable code and the HTTP status."""
-        super().__init__(message)
-        self.error_code = error_code
-        self.status = status
-
-    def body(self) -> dict:
-        """Return the machine-readable JSON body of the failure."""
-        return {"error": str(self), "error_code": self.error_code}
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,48 +38,6 @@ class Answer:
     generation_complete: bool = False
 
 
-def as_request_error(exc: ExactusError) -> RequestError:
-    """Wrap one domain error into a request error with a stable code."""
-    code = getattr(
-        exc, "error_code", _ERROR_CODES.get(type(exc).__name__, "compute_error")
-    )
-    return RequestError(str(exc), code, 422)
-
-
-def decode_data(raw) -> dict[str, bytes]:
-    """Decode and strictly validate the request-scoped data map.
-
-    Every payload is base64-decoded exactly once with strict alphabet
-    checking; names, payload sizes and payload counts are bounded.
-    """
-    if raw is None:
-        return {}
-    if not isinstance(raw, dict):
-        raise RequestError("data must be an object of base64 payloads", "invalid_data")
-    if len(raw) > _MAX_PAYLOADS:
-        raise RequestError("too many data payloads", "invalid_data")
-    decoded: dict[str, bytes] = {}
-    for name, payload in raw.items():
-        if not isinstance(name, str) or not _NAME_RE.match(name):
-            raise RequestError(
-                "data names must match [A-Za-z_][A-Za-z0-9_]{0,63}", "invalid_data"
-            )
-        if not isinstance(payload, str):
-            raise RequestError(
-                "data entries must map names to base64 strings", "invalid_data"
-            )
-        try:
-            value = base64.b64decode(payload, validate=True)
-        except Exception as exc:
-            raise RequestError(
-                "data payload is not valid base64", "invalid_data"
-            ) from exc
-        if len(value) > _MAX_PAYLOAD_BYTES:
-            raise RequestError("data payload exceeds 256 KiB", "invalid_data")
-        decoded[name] = value
-    return decoded
-
-
 def resolve_mode(raw, *, legacy_require_final=None) -> str:
     """Resolve the request mode from the explicit and the legacy field."""
     if raw is None:
@@ -109,17 +48,6 @@ def resolve_mode(raw, *, legacy_require_final=None) -> str:
             "invalid_mode",
         )
     return raw
-
-
-def split_payload(payload: Mapping) -> tuple[dict, dict[str, bytes], object]:
-    """Split one request into upstream fields, decoded data and the raw mode."""
-    if not isinstance(payload, Mapping):
-        raise RequestError("request body must be a JSON object", "invalid_request")
-    upstream = {
-        key: value for key, value in payload.items() if key not in CONTROL_FIELDS
-    }
-    data = decode_data(payload.get("data"))
-    return upstream, data, payload.get("mode")
 
 
 def model_answer(text: str, answer) -> str | None:

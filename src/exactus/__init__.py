@@ -1,7 +1,4 @@
-"""Exactus: bounded external computers for LLMs.
-
-Author: Olshansky Grigory
-"""
+"""Exactus: bounded external computers for LLMs."""
 
 from __future__ import annotations
 
@@ -20,9 +17,9 @@ from .domain.errors import (
 from .domain.expression import ExpressionEvaluator
 from .domain.ports import (
     Candidate,
-    ExternalComputer,
     DraftPredictor,
     Engine,
+    ExternalComputer,
     Hasher,
     Segment,
     Tokenizer,

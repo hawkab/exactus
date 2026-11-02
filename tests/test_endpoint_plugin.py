@@ -1,7 +1,4 @@
-"""Endpoint plugin factory and generate-wrapper surface tests.
-
-Author: Olshansky Grigory
-"""
+"""Endpoint plugin factory and generate-wrapper surface tests."""
 
 import asyncio
 import inspect
@@ -107,6 +104,7 @@ class TestEndpointPluginSurface(unittest.TestCase):
         wrapper = ExactusGenerateWrapper(FakeLLM(), coordinator)
 
         async def consume():
+            """Drain the native generation stream without changing its yielded values."""
             return [item async for item in wrapper.generate("p", None, "r-9", extra=1)]
 
         self.assertEqual(asyncio.run(consume()), [("delegated", "r-9")])

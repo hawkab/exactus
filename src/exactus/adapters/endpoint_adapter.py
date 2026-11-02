@@ -1,49 +1,30 @@
 """Bounded native segment coordinator; known values enter only via normal prefill."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
+
 import time
 import uuid
-from dataclasses import dataclass
 
-from ..domain.audit import Proof
 from ..domain.errors import BudgetError, GrammarError
 from ..domain.finalization import FinalizationError
+from ..domain.generation import EndpointResult as EndpointResult
 from ..domain.protocol import SpanMachine
 from .async_work import blocking
 from .endpoint_compute import compute_segment
 from .endpoint_validation import (
     RequestTypeError as RequestTypeError,
+)
+from .endpoint_validation import (
     RequestValueError,
     validate_request,
 )
 
 
-@dataclass(frozen=True, slots=True)
-class EndpointResult:
-    """Output-token accounting is not a count of GPU forwards or FLOPs."""
-
-    text: str
-    operations: tuple
-    engine_segments: int
-    sampled_tokens: int
-    known_tokens: int
-    prefill_tokens: int
-    exact_final: bool
-    elapsed_s: float
-    request_id: str
-    parent_id: str | None = None
-    transcript: str = ""
-    finish_reason: str = "stop"
-    proof: Proof | None = None
-    mode: str = "preserve-text"
-    model_final_emitted: bool = False
-    engine_wait_s: float = 0.0
-    cpu_stage_s: float = 0.0
-    prompt_tokens: int = 0
-    sampled_tokens_exact: bool = True
-
-
 class ExactusCoordinator:
+    """Coordinate generation and exact computation through engine and tokenizer ports."""
+
     def __init__(
         self,
         engine,
@@ -54,6 +35,7 @@ class ExactusCoordinator:
         context_limit=None,
         task_external_computer=None,
     ):
+        """Initialize Exactus Coordinator state and dependencies."""
         self._engine, self._tokenizer, self._external_computer = (
             engine,
             tokenizer,
@@ -68,6 +50,7 @@ class ExactusCoordinator:
 
     @property
     def tokenizer(self):
+        """Return the tokenizer port bound to this coordinator."""
         return self._tokenizer
 
     async def run_external_computers(self, tasks):
@@ -82,6 +65,7 @@ class ExactusCoordinator:
         return await blocking(run, tasks)
 
     async def run_plan(self, plan, *, inputs=None, checks=None):
+        """Execute a source-bound plan through the isolated technical-computer port."""
         from ..domain.errors import DataError
 
         run = getattr(self._task_external_computer, "run_plan", None)

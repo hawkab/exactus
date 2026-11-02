@@ -1,5 +1,7 @@
 """Keep admission ownership until non-cancellable thread work really ends."""
 
+__author__ = "Olshansky Grigory"
+
 import asyncio
 import contextvars
 import functools
@@ -17,7 +19,7 @@ async def blocking(fn, *args, **kwargs):
             cancelled = True
             if future.cancelled():
                 raise
-            continue  # repeated cancellation must not abandon the running thread
+            continue
         except Exception:
             if cancelled:
                 raise asyncio.CancelledError from None

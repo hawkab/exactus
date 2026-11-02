@@ -1,15 +1,12 @@
-"""Deadline-bounded framed byte transport for worker subprocess IPC.
-
-Author: Olshansky Grigory
-"""
+"""Deadline-bounded framed byte transport for worker subprocess IPC."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 import os
 import select
 import time
-
-__author__ = "Olshansky Grigory"
 
 MAX_FRAME = 1024 * 1024
 _CHUNK = 4096

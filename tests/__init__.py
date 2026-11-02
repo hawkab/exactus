@@ -1,7 +1,5 @@
-"""Test package: makes the src layout importable without installation.
+"""Test package: makes the src layout importable without installation."""
 
-Author: Olshansky Grigory
-"""
 import sys
 from pathlib import Path
 

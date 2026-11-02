@@ -1,7 +1,5 @@
-"""Tests for the logits forcing adapter.
+"""Tests for the logits forcing adapter."""
 
-Author: Olshansky Grigory
-"""
 import unittest
 
 from exactus.adapters.logits_adapter import ExactusLogitsProcessor
@@ -46,6 +44,7 @@ class TestExactusLogitsProcessor(unittest.TestCase):
     def test_out_of_vocab_target_raises(self):
         """Out-of-vocabulary targets raise instead of silently resetting."""
         from exactus.adapters.logits_state import LogitsStateError
+
         self.processor.plan_text("A")
         with self.assertRaises(LogitsStateError):
             self.processor.apply_offline([1.0, 1.0])
@@ -53,6 +52,7 @@ class TestExactusLogitsProcessor(unittest.TestCase):
     def test_interface_stubs(self):
         """Params stub never raises; malformed batch updates are rejected."""
         from exactus.adapters.logits_state import LogitsStateError
+
         self.processor.validate_params(object())
         with self.assertRaises(LogitsStateError):
             self.processor.update_state(object())

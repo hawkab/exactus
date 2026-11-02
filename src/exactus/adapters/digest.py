@@ -1,18 +1,28 @@
-"""Hashlib-backed digest adapter with common and modern algorithms.
+"""Hashlib-backed digest adapter with common and modern algorithms."""
 
-Author: Olshansky Grigory
-"""
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 import hashlib
 import zlib
 
-__author__ = "Olshansky Grigory"
-
 _DIGEST_BYTES = 32
 _BLOCK = {"shake_128", "shake_256"}
-_SAFE = ("adler32", "blake2b", "blake2s", "crc32", "md5", "sha1", "sha256", "sha512",
-         "sha3_256", "sha3_512", "shake_128", "shake_256")
+_SAFE = (
+    "adler32",
+    "blake2b",
+    "blake2s",
+    "crc32",
+    "md5",
+    "sha1",
+    "sha256",
+    "sha512",
+    "sha3_256",
+    "sha3_512",
+    "shake_128",
+    "shake_256",
+)
 
 
 class HashlibHasher:

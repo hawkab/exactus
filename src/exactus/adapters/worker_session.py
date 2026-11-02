@@ -1,9 +1,8 @@
-"""Exclusive multi-operation lease API for the sandboxed worker.
-
-Author: Olshansky Grigory
-"""
+"""Exclusive multi-operation lease API for the sandboxed worker."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 import base64
 import threading
@@ -11,8 +10,6 @@ from collections.abc import Mapping
 
 from exactus.domain.errors import ExactusError
 from exactus.domain.value import ComputeValue
-
-__author__ = "Olshansky Grigory"
 
 
 def encode_data(data: Mapping[str, bytes]) -> dict[str, str]:
@@ -102,6 +99,7 @@ class WorkerSession:
         return False
 
     def _check_owner(self) -> None:
+        """Reject closed, nested, stale, or cross-thread session access."""
         if (
             not self._leased
             or self._owner_thread != threading.get_ident()

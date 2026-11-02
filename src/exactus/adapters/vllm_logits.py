@@ -1,7 +1,9 @@
 """Experimental legacy ABI. For MTP use the native endpoint/prefill path."""
 
-from dataclasses import dataclass
+__author__ = "Olshansky Grigory"
+
 import os
+from dataclasses import dataclass
 
 from .logits_adapter import _force_row, _validate_row
 from .logits_state import LogitsStateError
@@ -16,6 +18,8 @@ except ImportError:
 
 @dataclass(slots=True)
 class Plan:
+    """Track one legacy request forcing prefix and its position."""
+
     tokens: tuple
     output: list
     checked: int = 0
@@ -25,6 +29,7 @@ class LegacyExactusLogitsProcessor(LogitsProcessor):
     """Cursor follows committed tokens, not calls to apply; legacy BatchUpdate ABI."""
 
     def __init__(self, vllm_config, device, is_pin_memory):
+        """Initialize Legacy Exactus Logits Processor state and dependencies."""
         if os.environ.get("VLLM_USE_V2_MODEL_RUNNER") != "0":
             raise LogitsStateError(
                 "this class supports only the explicit legacy runner"
@@ -38,6 +43,7 @@ class LegacyExactusLogitsProcessor(LogitsProcessor):
 
     @classmethod
     def validate_params(cls, params):
+        """Validate the legacy request token-forcing parameters."""
         tokens = (getattr(params, "extra_args", None) or {}).get(
             "exactus_token_ids", []
         )
@@ -51,9 +57,11 @@ class LegacyExactusLogitsProcessor(LogitsProcessor):
             )
 
     def is_argmax_invariant(self):
+        """Report that forcing deliberately changes the selected token."""
         return False
 
     def update_state(self, batch_update):
+        """Apply request additions, moves, and removals without resetting resumed prefixes."""
         if batch_update is None:
             return
         for index in batch_update.removed:
@@ -65,8 +73,7 @@ class LegacyExactusLogitsProcessor(LogitsProcessor):
             tokens = tuple(
                 (getattr(params, "extra_args", None) or {}).get("exactus_token_ids", [])
             )
-            # extra_args defines a prefix from generation position zero;
-            # re-admission after preemption must not restart that prefix.
+
             if tokens:
                 self.slots[index] = Plan(tokens, output_ids)
             else:
@@ -94,6 +101,7 @@ class LegacyExactusLogitsProcessor(LogitsProcessor):
             raise LogitsStateError("legacy batch indices must be dense after update")
 
     def apply(self, logits):
+        """Force registered request rows while preserving preempted request progress."""
         if len(logits) != self.batch_size:
             raise LogitsStateError(
                 "unexpected layout; speculative rows are unsupported"

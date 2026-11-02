@@ -1,60 +1,47 @@
 """Installable zero-argument endpoint plugin, opt-in through VLLM_PLUGINS."""
 
-import inspect
+__author__ = "Olshansky Grigory"
+
 import asyncio
+import inspect
 import weakref
 
 from .async_work import blocking
 from .endpoint_adapter import ExactusCoordinator
 from .endpoint_plugin import PluginStateError
 from .native_engine import NativeEngine, NativeTokenizer
+from .plugin_state import DeferredCoordinator
 from .worker import WorkerExternalComputer
 
 
 class _Models:
+    """Read served model names from shared plugin state."""
+
     def __init__(self, state):
+        """Initialize Models state and dependencies."""
         self.state = state
 
     def __getitem__(self, index):
+        """Return the item selected by the supplied key or index."""
         return self.state.exactus_models[index]
 
     def __contains__(self, model):
+        """Report whether the supplied value belongs to this collection."""
         return model in self.state.exactus_models
 
 
-class _Coordinator:
-    def __init__(self, state):
-        self.state = state
-
-    @property
-    def _tokenizer(self):
-        return self._bound().tokenizer
-
-    def _bound(self):
-        result = getattr(self.state, "exactus_coordinator", None)
-        if result is None:
-            raise PluginStateError("native plugin is not initialized")
-        return result
-
-    async def run(self, *args, **kwargs):
-        return await self._bound().run(*args, **kwargs)
-
-    async def run_external_computers(self, tasks):
-        return await self._bound().run_external_computers(tasks)
-
-    async def run_plan(self, plan, **kwargs):
-        return await self._bound().run_plan(plan, **kwargs)
-
-
 class ExactusEndpointPlugin:
+    """Wire the native generation engine into the Exactus endpoint lifecycle."""
+
     name = "exactus"
     required_tasks = ("generate",)
 
     def attach_router(self, app):
+        """Register routes before initialization and close owned workers at shutdown."""
         from .endpoint_route import attach
 
         app.state.exactus_models = ("initializing",)
-        attach(app, _Coordinator(app.state), _Models(app.state))
+        attach(app, DeferredCoordinator(app.state), _Models(app.state))
         self._app = weakref.ref(app)
         from contextlib import asynccontextmanager
 
@@ -62,6 +49,7 @@ class ExactusEndpointPlugin:
 
         @asynccontextmanager
         async def lifespan(application):
+            """Preserve the host lifespan and release both lazy worker processes."""
             try:
                 async with previous_lifespan(application) as value:
                     yield value
@@ -77,6 +65,7 @@ class ExactusEndpointPlugin:
         app.router.lifespan_context = lifespan
 
     async def init_state(self, engine_client, state, args):
+        """Resolve engine configuration and create separate span and technical workers."""
         app = self._app() if hasattr(self, "_app") else None
         if app is not None and any(
             sum(
@@ -135,8 +124,7 @@ class ExactusEndpointPlugin:
             raise PluginStateError("cannot resolve the native model context limit")
         worker = WorkerExternalComputer()
         state.exactus_worker = worker
-        # A SQL VM budget must not monopolize the lock needed to resume the
-        # model's short integer spans. Both child processes remain lazy.
+
         state.exactus_external_computer_worker = WorkerExternalComputer()
         names = getattr(args, "served_model_name", None) or [args.model]
         state.exactus_models = (names,) if isinstance(names, str) else tuple(names)

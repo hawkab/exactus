@@ -1,18 +1,22 @@
 """Offline all-arm smoke and independent scorer checks, without model traffic."""
 
-from pathlib import Path
+__author__ = "Olshansky Grigory"
+
 import sys
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "benchmarks"))
 import bench_live as live
 import bench_live_support as support
+
 from exactus.adapters.digest import HashlibHasher
 from exactus.adapters.in_process import InProcessExternalComputer
 
 
 def reply(text, finish="stop", calls=None, ttft=0.1):
+    """Build a completion fixture with explicit usage and finish status."""
     return {
         "text": text,
         "finish": finish,
@@ -24,11 +28,15 @@ def reply(text, finish="stop", calls=None, ttft=0.1):
 
 
 class BenchLiveTests(unittest.TestCase):
+    """Exercise Bench Live Tests behavior with isolated fixtures."""
+
     def setUp(self):
+        """Prepare isolated dependencies for each test."""
         self.task = {"id": "test", "q": "2+3?", "truth": 5, "expr": "2+3"}
         self.external_computer = InProcessExternalComputer(HashlibHasher())
 
     def test_alone_and_marker_imports_and_budget(self):
+        """Verify alone and marker imports and budget."""
         for fn, text, extra in (
             (live.run_alone, "\\answer{5}", []),
             (live.run_marker, "<calc-final>2+3</calc-final>", [self.external_computer]),
@@ -39,6 +47,7 @@ class BenchLiveTests(unittest.TestCase):
                 self.assertEqual(chat.call_args.kwargs["max_tokens"], 77)
 
     def test_marker_loop_injects_all_results(self):
+        """Verify marker loop injects all results."""
         replies = [
             reply("<calc>1+1</calc><calc>2+2</calc>"),
             reply("<calc-final>2+3</calc-final>"),
@@ -54,10 +63,12 @@ class BenchLiveTests(unittest.TestCase):
             self.assertEqual(chat.call_args.kwargs["max_tokens"], 72)
 
     def test_toolcall_result_and_visible_ttft(self):
+        """Verify toolcall result and visible ttft."""
         clock = [0.0]
         messages = []
 
         def chat(port, model, msgs, **kwargs):
+            """Send a model request and retain its actual usage and completion status."""
             messages.append(msgs[:])
             clock[0] += 1
             if len(messages) == 1:
@@ -79,6 +90,7 @@ class BenchLiveTests(unittest.TestCase):
         self.assertEqual(row["ttft"], 1.1)
 
     def test_truncation_and_missing_usage_are_failures(self):
+        """Verify truncation and missing usage are failures."""
         for r in (
             reply("\\answer{5}", "length"),
             {**reply("\\answer{5}"), "usage": {}},
@@ -88,6 +100,7 @@ class BenchLiveTests(unittest.TestCase):
             self.assertTrue(row["answer_match"])
 
     def test_independent_evaluator_is_bounded(self):
+        """Verify independent evaluator is bounded."""
         self.assertEqual(support.independent_eval("(7-2)*3"), 15)
         self.assertEqual(support.independent_eval("-7/2"), -3)
         for expr in ("2**1000000", "'x'*1000000000", "__import__('os')"):
@@ -95,6 +108,7 @@ class BenchLiveTests(unittest.TestCase):
                 support.independent_eval(expr)
 
     def test_unique_tasks_and_manifest_dry_run(self):
+        """Verify unique tasks and manifest dry run."""
         tasks = support.tasks(60)
         self.assertEqual(len({t["expr"] for t in tasks}), 60)
         self.assertEqual(len({t["id"] for t in tasks}), 60)

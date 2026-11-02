@@ -1,16 +1,13 @@
-"""Tests for audited proofs and prompt dispatch.
-
-Author: Olshansky Grigory
-"""
+"""Tests for audited proofs and prompt dispatch."""
 
 import unittest
 
+from exactus.adapters.digest import HashlibHasher
 from exactus.adapters.dispatch import (
+    external_computer_answer,
     find_expression,
     last_user_text,
-    external_computer_answer,
 )
-from exactus.adapters.digest import HashlibHasher
 from exactus.adapters.in_process import InProcessExternalComputer
 from exactus.domain.audit import Proof, SpanProof, check_answer
 from exactus.proxy import ExactusProxy

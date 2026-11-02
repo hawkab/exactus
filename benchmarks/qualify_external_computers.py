@@ -1,16 +1,20 @@
 """CPU-only external computer qualification; never imports torch or calls an LLM."""
 
+__author__ = "Olshansky Grigory"
+
 import json
 import platform
 import statistics
 import time
 
+from bench_external_computers import case, same_json
+
 import exactus
 from exactus.adapters.worker import WorkerExternalComputer
-from bench_external_computers import case, same_json
 
 
 def main():
+    """Parse command-line options and run this module workload."""
     worker = WorkerExternalComputer()
     times, rows = [], []
     try:

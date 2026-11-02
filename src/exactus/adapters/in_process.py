@@ -1,17 +1,14 @@
-"""In-process external computer adapter built on the domain evaluator.
-
-Author: Olshansky Grigory
-"""
+"""In-process external computer adapter built on the domain evaluator."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 from collections.abc import Mapping
 
 from ..domain.expression import ExpressionEvaluator
 from ..domain.ports import Hasher
 from ..domain.value import ComputeValue
-
-__author__ = "Olshansky Grigory"
 
 
 class InProcessExternalComputer:

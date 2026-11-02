@@ -1,12 +1,10 @@
-"""Tests for the drop-in proxy request and response rewriting.
-
-Author: Olshansky Grigory
-"""
+"""Tests for the drop-in proxy request and response rewriting."""
 
 import unittest
 
 from exactus.adapters.digest import HashlibHasher
 from exactus.adapters.in_process import InProcessExternalComputer
+from exactus.prompts import system_hint
 from exactus.proxy import (
     ExactusProxy,
     extract_content,
@@ -14,7 +12,6 @@ from exactus.proxy import (
     replace_content,
 )
 from exactus.proxy_modes import RequestError
-from exactus.prompts import system_hint
 
 __author__ = "Olshansky Grigory"
 

@@ -1,7 +1,4 @@
-"""Tests for request-data isolation and worker request ownership.
-
-Author: Olshansky Grigory
-"""
+"""Tests for request-data isolation and worker request ownership."""
 
 import hashlib
 import sys
@@ -14,8 +11,9 @@ from exactus.adapters.in_process import InProcessExternalComputer
 from exactus.adapters.worker import WorkerExternalComputer
 from exactus.domain.errors import DataError, ExactusError
 from exactus.domain.expression import EvalContext
-from tests._isolation_support import IDLE_CHILD_SCRIPT, PARTIAL_REPLY_SCRIPT
 from tests._isolation_support import (
+    IDLE_CHILD_SCRIPT,
+    PARTIAL_REPLY_SCRIPT,
     ScriptedChild,
     ScriptedExternalComputer,
     echo_reply,

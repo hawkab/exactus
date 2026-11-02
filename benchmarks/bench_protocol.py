@@ -5,10 +5,7 @@ multiplies them by a caller-supplied TPOT constant. No model, tokenizer,
 GPU, prefill or MTP acceptance participates. Byte counts are not model
 tokens. Use it only to reason about token-path accounting; use a paired
 live benchmark with real usage/finish_reason and an independent scorer
-for any speedup claim.
-
-Author: Olshansky Grigory
-"""
+for any speedup claim."""
 
 from __future__ import annotations
 

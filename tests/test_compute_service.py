@@ -1,7 +1,4 @@
-"""Tests for the exact-span compute use case.
-
-Author: Olshansky Grigory
-"""
+"""Tests for the exact-span compute use case."""
 
 import unittest
 

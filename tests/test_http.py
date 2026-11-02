@@ -1,7 +1,4 @@
-"""FastAPI route tests for the exact-compute endpoint registration.
-
-Author: Olshansky Grigory
-"""
+"""FastAPI route tests for the exact-compute endpoint registration."""
 
 import asyncio
 import hashlib
@@ -68,8 +65,7 @@ def asgi_call(app, method: str, path: str, body: bytes = b"", headers=None):
                     "body": pending.pop(0),
                     "more_body": False,
                 }
-            # A fully uploaded request is NOT a disconnected client. Real ASGI
-            # receive waits here until the peer actually disconnects.
+
             await asyncio.Event().wait()
 
         async def send(message):

@@ -1,10 +1,12 @@
 """Require useful provenance; declared metadata is never called an attestation."""
 
+__author__ = "Olshansky Grigory"
+
 import json
-from pathlib import Path
 import subprocess
 import time
 import urllib.request
+from pathlib import Path
 
 
 class QualificationBusy(RuntimeError):
@@ -15,10 +17,12 @@ class QualificationGate:
     """Advisory idle gate, not an exclusive reservation of the shared backend."""
 
     def __init__(self, capacity_url, metrics_url):
+        """Initialize Qualification Gate state and dependencies."""
         self.capacity_url, self.metrics_url = capacity_url, metrics_url
         self.elapsed_s = 0.0
 
     def __call__(self):
+        """Check ingress readiness and engine activity before allowing a benchmark call."""
         try:
             from .bench_external_computers import idle
         except ImportError:
@@ -70,6 +74,7 @@ def source_provenance(root):
 
 
 def load_runtime(path, arm_names=None):
+    """Validate declared model, tokenizer, runtime, and container provenance."""
     if path is None:
         return None
     raw = json.loads(Path(path).read_text())

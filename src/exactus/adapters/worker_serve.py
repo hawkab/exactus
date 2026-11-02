@@ -1,18 +1,15 @@
-"""Child-side request loop for the sandboxed worker subprocess.
-
-Author: Olshansky Grigory
-"""
+"""Child-side request loop for the sandboxed worker subprocess."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 import base64
 import json
 from collections.abc import Mapping
 
 from exactus.adapters.worker_frame import FrameClosed, FrameStream, FrameTooLarge
-from exactus.domain.errors import ExactusError, BudgetError, DataError
-
-__author__ = "Olshansky Grigory"
+from exactus.domain.errors import BudgetError, DataError, ExactusError
 
 _MEMORY_LIMIT = 128 * 1024 * 1024
 
@@ -135,6 +132,7 @@ class RequestLoop:
         return self._value(request["expression"], data, request)
 
     def _value(self, expression, data, request):
+        """Serialize an exact integer and its requested output format."""
         value = self._external_computer.evaluate(
             expression, data, output_format=request.get("format", "dec")
         )

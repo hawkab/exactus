@@ -1,19 +1,16 @@
-"""Exact-span computation over generated transcripts.
-
-Author: Olshansky Grigory
-"""
+"""Exact-span computation over generated transcripts."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 from collections.abc import Mapping
 from dataclasses import dataclass
 
 from ..domain.errors import ExactusError, GrammarError
-from ..domain.ports import ExternalComputer
 from ..domain.finalization import finalize, validate_final
+from ..domain.ports import ExternalComputer
 from ..domain.protocol import SpanMachine
-
-__author__ = "Olshansky Grigory"
 
 
 class ComputeError(ExactusError):

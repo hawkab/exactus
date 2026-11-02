@@ -1,12 +1,9 @@
-"""Benchmark: external computer adapter latency without and with a persistent worker.
-
-Author: Olshansky Grigory
-"""
+"""Benchmark: external computer adapter latency without and with a persistent worker."""
 
 from __future__ import annotations
 
-import statistics
 import platform
+import statistics
 import sys
 import time
 from pathlib import Path

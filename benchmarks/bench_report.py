@@ -1,13 +1,16 @@
 """Shared aggregation and offline replay: invalid metrics never improve a score."""
 
-from collections import Counter, defaultdict
+__author__ = "Olshansky Grigory"
+
 import json
 import math
 import random
 import statistics
+from collections import Counter, defaultdict
 
 
 def stats(values):
+    """Summarize finite nonnegative observations without inventing missing measurements."""
     ordered = sorted(
         v for v in values if type(v) in (int, float) and math.isfinite(v) and v >= 0
     )
@@ -21,6 +24,7 @@ def stats(values):
 
 
 def aggregate(rows):
+    """Group benchmark observations and retain failure and usage accounting."""
     arms = defaultdict(list)
     for row in rows:
         arms[row["arm"]].append(row)
@@ -61,6 +65,7 @@ def metric_row(row):
 
 
 def verify_row(row):
+    """Check a retained result against its independent task truth and source output."""
     if (
         type(row.get("wall")) not in (int, float)
         or not math.isfinite(row["wall"])
@@ -89,8 +94,9 @@ def verify_row(row):
             ok = ok and judge(stage.get("text", ""), expected)["correct"]
     else:
         from bench_live_support import independent_eval, score_alone, score_marker
-        from exactus.adapters.in_process import InProcessExternalComputer
+
         from exactus.adapters.digest import HashlibHasher
+        from exactus.adapters.in_process import InProcessExternalComputer
 
         task = row["task"]
         if independent_eval(task["expr"]) != task["truth"]:
@@ -112,6 +118,7 @@ def verify_row(row):
 
 
 def paired(rows, baseline="alone", seed=20261030):
+    """Compare matching successful task observations and report their sample size."""
     cases = defaultdict(dict)
     for r in rows:
         cases[r["task"]["id"]][r["arm"]] = r
@@ -152,6 +159,7 @@ def paired(rows, baseline="alone", seed=20261030):
 
 
 def replay(path):
+    """Recompute a summary from retained source observations without network calls."""
     with open(path) as source:
         header = json.loads(next(source))
         if header.get("record_type") != "manifest":

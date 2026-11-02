@@ -1,17 +1,14 @@
-"""Ports of the Exactus hexagonal architecture.
-
-Author: Olshansky Grigory
-"""
+"""Ports of the Exactus hexagonal architecture."""
 
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from .value import ComputeValue
-
-__author__ = "Olshansky Grigory"
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,7 +53,19 @@ class ExternalComputer(Protocol):
         *,
         output_format: str = "dec",
     ) -> ComputeValue:
-        """Evaluate one expression under the given request-scoped data."""
+        """Evaluate an expression using only its request-scoped inputs.
+
+        Args:
+            expression: Exact integer expression in the supported grammar.
+            data: Named byte payloads available to this evaluation only.
+            output_format: Rendering format of the resulting integer.
+
+        Returns:
+            An exact value with its requested rendering format.
+
+        Raises:
+            ExactusError: The expression or its inputs cannot be evaluated.
+        """
 
 
 @runtime_checkable

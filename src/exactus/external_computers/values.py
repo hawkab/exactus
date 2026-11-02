@@ -1,5 +1,7 @@
 """Shared JSON and work budgets for untrusted external computer requests."""
 
+__author__ = "Olshansky Grigory"
+
 import json
 from dataclasses import dataclass
 
@@ -51,6 +53,7 @@ def bounded(value, *, depth=0, counter=None):
 
 
 def packed(value):
+    """Validate a JSON value and encode it canonically for hashing or transport."""
     bounded(value)
     result = json.dumps(
         value,
@@ -66,6 +69,8 @@ def packed(value):
 
 @dataclass(frozen=True, slots=True)
 class _Encoding:
+    """Store measured bytes, nodes, depth, and the owner of a sealed JSON tree."""
+
     size: int
     nodes: int
     depth: int
@@ -84,13 +89,17 @@ class OwnedJSON:
     __slots__ = ("_memo",)
 
     def __init__(self):
+        """Initialize Owned JSON state and dependencies."""
         self._memo = {}
 
     def encode(self, value):
+        """Encode a private snapshot while reusing sealed-child measurements.
+
+        Retain the C JSON encoder for ordinary objects; cache measurements of
+        sealed children rather than rescanning or concatenating whole trees.
+        """
         self._measure(value, 0)
-        # Keep the C JSON encoder for small/fresh objects; Python fragment
-        # concatenation was slower on ordinary plans. Reuse measurements of
-        # sealed children, not repeated whole-tree validation.
+
         return json.dumps(
             value,
             ensure_ascii=False,
@@ -100,6 +109,7 @@ class OwnedJSON:
         )
 
     def _measure(self, value, nesting):
+        """Measure each occurrence while memoizing only privately owned containers."""
         if nesting > 32:
             raise BudgetError("external computer value tree exceeds budget")
         kind = type(value)
@@ -142,12 +152,14 @@ class OwnedJSON:
 
     @staticmethod
     def _check(value, nesting=0):
+        """Validate encoded byte, node, and nesting measurements."""
         if value.size > MAX_BYTES:
             raise BudgetError("external computer JSON exceeds 64 KiB")
         if value.nodes > 16384 or value.depth + nesting > 32:
             raise BudgetError("external computer value tree exceeds budget")
 
     def sequence(self):
+        """Create incremental accounting for a growing result sequence."""
         return _SequenceBudget(self)
 
 
@@ -157,9 +169,11 @@ class _SequenceBudget:
     __slots__ = ("owner", "size", "nodes", "depth", "count")
 
     def __init__(self, owner):
+        """Initialize Sequence Budget state and dependencies."""
         self.owner, self.size, self.nodes, self.depth, self.count = owner, 2, 1, 0, 0
 
     def append(self, value):
+        """Charge one immutable result row without rescanning the growing sequence."""
         if self.count >= MAX_ITEMS:
             raise DataError("external computer aggregate exceeds item budget")
         size, nodes, depth = self.owner._measure(value, 1)

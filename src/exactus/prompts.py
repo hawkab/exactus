@@ -1,7 +1,4 @@
-"""Model presets: system hints that activate the exact-span protocol.
-
-Author: Olshansky Grigory
-"""
+"""Model presets: system hints that activate the exact-span protocol."""
 
 from __future__ import annotations
 

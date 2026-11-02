@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+__author__ = "Olshansky Grigory"
+
 import re
+from collections.abc import Sequence
 
 from .audit import Proof, SpanProof, check_answer
 from .errors import GrammarError
@@ -14,6 +16,7 @@ class FinalizationError(GrammarError):
     """Protocol failure with a stable adapter-independent error code."""
 
     def __init__(self, message: str, code: str) -> None:
+        """Initialize Finalization Error state and dependencies."""
         super().__init__(message)
         self.error_code = code
 

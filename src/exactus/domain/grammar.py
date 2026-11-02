@@ -1,13 +1,11 @@
-"""Recursive-descent grammar parser over the expression token stream.
+"""Recursive-descent grammar parser over the expression token stream."""
 
-Author: Olshansky Grigory
-"""
 from __future__ import annotations
+
+__author__ = "Olshansky Grigory"
 
 from .errors import BudgetError, GrammarError
 from .lexer import Token
-
-__author__ = "Olshansky Grigory"
 
 _UNARY = ("-", "+", "~")
 _MUL = ("*", "/", "//", "%", "mod")
@@ -24,7 +22,9 @@ class GrammarParser:
     numeric policy and holds no request data of its own.
     """
 
-    def __init__(self, host, tokens: list[Token], context, *, max_nodes: int, max_depth: int) -> None:
+    def __init__(
+        self, host, tokens: list[Token], context, *, max_nodes: int, max_depth: int
+    ) -> None:
         """Store the semantic host, the token stream, the request context and the complexity budgets."""
         self._host = host
         self._tokens = tokens
@@ -121,7 +121,9 @@ class GrammarParser:
         while self._peek().text in _MUL:
             op = self._take().text
             self._count()
-            value = self._host.bound(self._host.mul_case(op, value, self._parse_unary()))
+            value = self._host.bound(
+                self._host.mul_case(op, value, self._parse_unary())
+            )
         return value
 
     def _parse_unary(self) -> int:
@@ -130,7 +132,9 @@ class GrammarParser:
             op = self._take().text
             self._count()
             value = self._parse_unary()
-            return self._host.bound(-value if op == "-" else ~value if op == "~" else value)
+            return self._host.bound(
+                -value if op == "-" else ~value if op == "~" else value
+            )
         return self._parse_power()
 
     def _parse_power(self) -> int:

@@ -1,7 +1,5 @@
-"""Tests for computed value rendering formats.
+"""Tests for computed value rendering formats."""
 
-Author: Olshansky Grigory
-"""
 import unittest
 
 from exactus.domain.errors import FormatError

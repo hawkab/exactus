@@ -1,12 +1,10 @@
-"""Byte-level tokenizer adapter for dependency-free token accounting.
+"""Byte-level tokenizer adapter for dependency-free token accounting."""
 
-Author: Olshansky Grigory
-"""
 from __future__ import annotations
 
-from collections.abc import Sequence
-
 __author__ = "Olshansky Grigory"
+
+from collections.abc import Sequence
 
 
 class ByteTokenizer:

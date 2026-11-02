@@ -1,15 +1,21 @@
 """Bound accepted sockets BEFORE creating threads; reuse bounded work threads."""
 
+__author__ = "Olshansky Grigory"
+
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from http.server import ThreadingHTTPServer
-import threading
+
 from .cancellation import Cancellation
 
 
 class BoundedHTTPServer(ThreadingHTTPServer):
+    """Admit sockets before creating handler threads and track active work."""
+
     daemon_threads = True
 
     def __init__(self, address, handler, *, limit):
+        """Initialize Bounded HTTPServer state and dependencies."""
         self._connections = threading.BoundedSemaphore(max(1, limit))
         self._cancellation = Cancellation()
         self._executor = ThreadPoolExecutor(
@@ -20,6 +26,7 @@ class BoundedHTTPServer(ThreadingHTTPServer):
         super().__init__(address, handler)
 
     def process_request(self, request, address):
+        """Acquire connection capacity before starting a handler thread."""
         if not self._connections.acquire(blocking=False):
             try:
                 request.settimeout(0.05)
@@ -39,12 +46,14 @@ class BoundedHTTPServer(ThreadingHTTPServer):
             raise
 
     def process_request_thread(self, request, address):
+        """Run an admitted connection and always release its socket slot."""
         try:
             super().process_request_thread(request, address)
         finally:
             self._connections.release()
 
     def server_close(self):
+        """Close listening resources and shut down the request executor."""
         self._cancellation.cancel()
         super().server_close()
         self._executor.shutdown(wait=False)

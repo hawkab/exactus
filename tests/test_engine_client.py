@@ -1,7 +1,4 @@
-"""HTTP engine client, stop-boundary and plan_text wiring tests.
-
-Author: Olshansky Grigory
-"""
+"""HTTP engine client, stop-boundary and plan_text wiring tests."""
 
 import asyncio
 import json
@@ -145,6 +142,7 @@ class TestEngineClient(unittest.TestCase):
         self.assertEqual(segment.token_ids, (1,))
 
     def test_missing_or_invalid_usage_fails_closed_by_default(self):
+        """Verify missing or invalid usage fails closed by default."""
         for usage in (None, -1, True):
             reply = _chat("hello")
             if usage is None:
@@ -156,6 +154,7 @@ class TestEngineClient(unittest.TestCase):
                 asyncio.run(self._client().generate([65], 32, "r"))
 
     def test_eos_does_not_invent_close_tag(self):
+        """Verify eos does not invent close tag."""
         self.state.replies.append((200, _chat("<calc-final>2+3")))
         segment = asyncio.run(
             self._client(stop=["</calc-final>"]).generate([65], 32, "r")
@@ -163,6 +162,7 @@ class TestEngineClient(unittest.TestCase):
         self.assertEqual(segment.text, "<calc-final>2+3")
 
     def test_chat_template_context_checked_before_http(self):
+        """Verify chat template context checked before http."""
         client = self._client(context_limit=16)
         with self.assertRaises(EngineError):
             asyncio.run(client.generate([65], 8, "r"))

@@ -1,18 +1,20 @@
 """Complexity, context, native boundary and request-scoped IPC regressions."""
 
+__author__ = "Olshansky Grigory"
+
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import os
-from types import SimpleNamespace as NS
 import unittest
+from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace as NS
 from unittest.mock import patch
 
 from exactus.adapters.digest import HashlibHasher
 from exactus.adapters.endpoint_adapter import ExactusCoordinator
 from exactus.adapters.in_process import InProcessExternalComputer
 from exactus.adapters.tokenizer import ByteTokenizer
-from exactus.adapters.worker import WorkerExternalComputer
 from exactus.adapters.vllm_logits import LegacyExactusLogitsProcessor
+from exactus.adapters.worker import WorkerExternalComputer
 from exactus.domain.errors import ExactusError
 from exactus.domain.ports import Segment
 from exactus.domain.protocol import SpanMachine, parse
@@ -21,16 +23,21 @@ from exactus.proxy_modes import RequestError
 
 
 class DeepCompute(unittest.TestCase):
+    """Exercise Deep Compute behavior with isolated fixtures."""
+
     def setUp(self):
+        """Prepare isolated dependencies for each test."""
         self.external_computer = InProcessExternalComputer(HashlibHasher())
 
     def test_oversized_expression_rejected_before_worker_spawn(self):
+        """Verify oversized expression rejected before worker spawn."""
         worker = WorkerExternalComputer()
         with self.assertRaises(ExactusError):
             worker.evaluate("1" * 200000)
         self.assertIsNone(worker._proc)
 
     def test_context_is_not_dispatched(self):
+        """Verify context is not dispatched."""
         proxy = ExactusProxy("unused", self.external_computer)
         payload = {
             "messages": [
@@ -55,6 +62,7 @@ class DeepCompute(unittest.TestCase):
         self.assertEqual(caught.exception.error_code, "missing_final")
 
     def test_parser_does_not_rescan_and_offsets_survive_unicode_chunks(self):
+        """Verify parser does not rescan and offsets survive unicode chunks."""
         import exactus.domain.protocol as protocol
 
         text = "я" + "<" * 10000 + "x<calc>1<<8</calc> <calc-final>2+3</calc-final>"
@@ -77,10 +85,15 @@ class DeepCompute(unittest.TestCase):
         self.assertEqual(parsed.spans[0].expression, "1<<8")
 
     def test_segment_boundary_before_work(self):
+        """Verify segment boundary before work."""
+
         class Engine:
+            """Exercise Engine behavior with isolated fixtures."""
+
             calls = 0
 
             async def generate(self, *args):
+                """Yield the configured generation result for a correlated engine request."""
                 self.calls += 1
                 return Segment("<calc>1</calc><calc>2", (), 1, "stop")
 
@@ -98,10 +111,14 @@ class DeepCompute(unittest.TestCase):
         self.assertEqual(engine.calls, 1)
 
     def test_one_cpu_job_per_segment(self):
+        """Verify one cpu job per segment."""
         import exactus.adapters.endpoint_adapter as adapter
 
         class Engine:
+            """Exercise Engine behavior with isolated fixtures."""
+
             async def generate(self, *args):
+                """Yield the configured generation result for a correlated engine request."""
                 return Segment(
                     "<calc>1+1</calc><calc-final>2+3</calc-final>", (), 1, "stop"
                 )
@@ -116,11 +133,13 @@ class DeepCompute(unittest.TestCase):
         self.assertEqual(jobs.call_count, 1)
 
     def test_request_scoped_data_concurrent_and_recycle(self):
+        """Verify request scoped data concurrent and recycle."""
         worker = WorkerExternalComputer(max_calls=3)
         try:
             handles = [worker.request({"x": bytes([value])}) for value in (1, 7, 99)]
 
             def run(item):
+                """Execute one synchronized workload case."""
                 value, handle = item
                 for _ in range(3):
                     self.assertEqual(
@@ -137,6 +156,7 @@ class DeepCompute(unittest.TestCase):
             worker.close()
 
     def test_request_data_encoded_once_and_failure_does_not_leak(self):
+        """Verify request data encoded once and failure does not leak."""
         import exactus.adapters.worker_request as module
 
         worker = WorkerExternalComputer(max_calls=100)
@@ -156,10 +176,15 @@ class DeepCompute(unittest.TestCase):
             worker.close()
 
     def test_empty_legacy_plans_never_copy_history(self):
+        """Verify empty legacy plans never copy history."""
+
         class History(list):
+            """Exercise History behavior with isolated fixtures."""
+
             reads = 0
 
             def __getitem__(self, key):
+                """Return the item selected by the supplied key or index."""
                 self.reads += 1
                 return super().__getitem__(key)
 
@@ -183,6 +208,7 @@ class DeepCompute(unittest.TestCase):
         self.assertEqual(proc.slots, {})
 
     def test_slot_defaults_not_allocated_on_existing_keys(self):
+        """Verify slot defaults not allocated on existing keys."""
         import exactus.adapters.logits_state as state
 
         value = state.ForcingState()

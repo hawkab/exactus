@@ -1,6 +1,9 @@
 """Strict request admission before invoking an inference engine."""
 
+__author__ = "Olshansky Grigory"
+
 from collections.abc import Mapping, Sequence
+
 from ..domain.errors import BudgetError, ExactusError, FormatError
 from ..domain.value import FORMATS
 
@@ -24,6 +27,7 @@ def validate_request(
     planner,
     context_limit,
 ):
+    """Validate generation controls and copy a token prompt before engine access."""
     if isinstance(prompt_ids, (str, bytes)) or not isinstance(prompt_ids, Sequence):
         raise RequestTypeError("prompt_ids must be a sequence of ints")
     if any(type(token) is not int for token in prompt_ids):

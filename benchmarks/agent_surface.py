@@ -1,5 +1,7 @@
 """Measure the actual raw/proxy/native HTTP surface, including client CPU work."""
 
+__author__ = "Olshansky Grigory"
+
 import json
 import time
 
@@ -7,13 +9,19 @@ from exactus.http_io import request_bytes
 
 
 class SurfaceFailure(RuntimeError):
+    """Carry an inference transport failure together with its partial evidence."""
+
     def __init__(self, message, partial):
+        """Initialize Surface Failure state and dependencies."""
         super().__init__(message)
         self.partial = partial
 
 
 class Surface:
+    """Adapt raw and native completion endpoints to a common benchmark response."""
+
     def __init__(self, url, kind, model, max_tokens, params=None, api_key=None):
+        """Initialize Surface state and dependencies."""
         if kind not in ("raw", "proxy", "native"):
             raise ValueError("unknown surface")
         self.url, self.kind, self.model, self.max_tokens = (
@@ -25,6 +33,7 @@ class Surface:
         self.params, self.api_key = dict(params or {}), api_key
 
     def __call__(self, prompt):
+        """Invoke the selected inference surface and retain usage and partial failures."""
         started = time.perf_counter()
         if self.kind == "native":
             body = {

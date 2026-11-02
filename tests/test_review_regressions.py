@@ -1,18 +1,20 @@
 """Negative cases from F01-F13 and N01-N06 reviews."""
 
+__author__ = "Olshansky Grigory"
+
 import asyncio
 import threading
 import unittest
 
-from exactus.adapters.dispatch import external_computer_answer
 from exactus.adapters.digest import HashlibHasher
-from exactus.adapters.in_process import InProcessExternalComputer
+from exactus.adapters.dispatch import external_computer_answer
 from exactus.adapters.endpoint_adapter import ExactusCoordinator
+from exactus.adapters.in_process import InProcessExternalComputer
 from exactus.adapters.tokenizer import ByteTokenizer
 from exactus.adapters.worker import WorkerExternalComputer
 from exactus.application.compute import ComputeService
-from exactus.domain.errors import ExactusError, GrammarError, BudgetError
 from exactus.domain.audit import Proof, SpanProof
+from exactus.domain.errors import BudgetError, ExactusError, GrammarError
 from exactus.domain.ports import Segment
 from exactus.proxy import ExactusProxy
 from exactus.proxy_modes import RequestError
@@ -20,11 +22,15 @@ from tests import test_http
 
 
 class ReviewRegressions(unittest.TestCase):
+    """Exercise Review Regressions behavior with isolated fixtures."""
+
     def setUp(self):
+        """Prepare isolated dependencies for each test."""
         self.external_computer = InProcessExternalComputer(HashlibHasher())
         self.proxy = ExactusProxy("unused", self.external_computer)
 
     def compute(self, prompt, texts, mode):
+        """Compute a local completion fixture under the requested response policy."""
         return self.proxy._compute(
             {"messages": [{"role": "user", "content": prompt}], "mode": mode},
             {
@@ -35,6 +41,7 @@ class ReviewRegressions(unittest.TestCase):
         )
 
     def test_ambiguous_dispatch_abstains(self):
+        """Verify ambiguous dispatch abstains."""
         prompts = [
             "Вычисли: 2+3. Затем умножь результат на 10.",
             "Вычисли: 12+3.5",
@@ -53,6 +60,7 @@ class ReviewRegressions(unittest.TestCase):
         self.assertNotIn("answer_check", out["exactus"])
 
     def test_check_each_choice_both_orders(self):
+        """Verify check each choice both orders."""
         for numbers in ((42, 999), (999, 42)):
             with self.assertRaises(RequestError) as caught:
                 self.compute(
@@ -63,6 +71,7 @@ class ReviewRegressions(unittest.TestCase):
             self.assertEqual(caught.exception.error_code, "answer_mismatch")
 
     def test_fallback_provenance(self):
+        """Verify fallback provenance."""
         out = self.compute("Вычисли: 7*6", ["\\answer{43}"], "numeric-final")["exactus"]
         self.assertEqual(out["operations"], 1)
         self.assertFalse(out["model_final_emitted"])
@@ -75,6 +84,7 @@ class ReviewRegressions(unittest.TestCase):
 
     @unittest.skipUnless(test_http.fastapi, "server extra is not installed")
     def test_endpoint_audit_and_strict_policies(self):
+        """Verify endpoint audit and strict policies."""
         case = test_http.TestExactRoute()
         for text, mode, expected in (
             ("v <calc>2+2</calc>", "audit", 200),
@@ -91,6 +101,7 @@ class ReviewRegressions(unittest.TestCase):
                 self.assertEqual(body["audit"]["spans"][0]["value"], "4")
 
     def test_preserve_final_narrative(self):
+        """Verify preserve final narrative."""
         text = "Report <calc-final>2</calc-final> tail"
         self.assertEqual(
             ComputeService(self.external_computer).run(text, require_final=False).text,
@@ -98,6 +109,7 @@ class ReviewRegressions(unittest.TestCase):
         )
 
     def test_unfinished_markers_and_generation_rejected(self):
+        """Verify unfinished markers and generation rejected."""
         for text in ("answer <ca", "<calc-final>2</calc-final><ca"):
             with self.assertRaises(RequestError):
                 self.compute("p", [text], "preserve-text")
@@ -115,10 +127,15 @@ class ReviewRegressions(unittest.TestCase):
             )
 
     def test_context_budget_each_segment(self):
+        """Verify context budget each segment."""
+
         class Engine:
+            """Exercise Engine behavior with isolated fixtures."""
+
             calls = []
 
             async def generate(self, ids, budget, rid):
+                """Yield the configured generation result for a correlated engine request."""
                 self.calls.append((len(ids), budget))
                 text = "<calc>1</calc>" if len(self.calls) == 1 else ""
                 return Segment(text, tuple(text.encode()), len(text.encode()), "stop")
@@ -134,10 +151,15 @@ class ReviewRegressions(unittest.TestCase):
         self.assertTrue(all(prompt + budget <= 61 for prompt, budget in engine.calls))
 
     def test_stop_token_overrun_is_not_reinjected(self):
+        """Verify stop token overrun is not reinjected."""
+
         class Engine:
+            """Exercise Engine behavior with isolated fixtures."""
+
             calls = []
 
             async def generate(self, ids, budget, rid):
+                """Yield the configured generation result for a correlated engine request."""
                 self.calls.append(bytes(ids).decode())
                 if len(self.calls) == 1:
                     text = "<calc>1</calc>"
@@ -156,6 +178,7 @@ class ReviewRegressions(unittest.TestCase):
         self.assertNotIn("OVERRUN", engine.calls[1])
 
     def test_stale_nested_cross_thread_sessions(self):
+        """Verify stale nested cross thread sessions."""
         worker = WorkerExternalComputer()
         try:
             with worker.session({"x": b"\x01"}) as first:
@@ -166,6 +189,7 @@ class ReviewRegressions(unittest.TestCase):
                 errors = []
 
                 def misuse():
+                    """Attempt session access from the wrong thread and retain the resulting failure."""
                     try:
                         first.evaluate("@x")
                     except ExactusError:
@@ -182,6 +206,7 @@ class ReviewRegressions(unittest.TestCase):
             worker.close()
 
     def test_proof_binding_and_operation_limit(self):
+        """Verify proof binding and operation limit."""
         with self.assertRaises(GrammarError):
             Proof((SpanProof("2+2", "4", True),)).inline("<calc-final>999</calc-final>")
         with self.assertRaises(BudgetError):
