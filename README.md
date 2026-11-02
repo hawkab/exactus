@@ -9,6 +9,25 @@ An external computer runs outside the model's prediction process, on the same
 host or another host. The Python port is `ExternalComputer`; implementations
 are `InProcessExternalComputer` and `WorkerExternalComputer`.
 
+## Arithmetic benchmark
+
+A controlled benchmark on October 30, 2026 compared 60 arithmetic tasks
+across four modes (240 runs total) using `qwen3.8-flash-next-nvidia`.
+
+| Metric | Model alone | Exactus with markers |
+|---|---:|---:|
+| Correct answers | 49/60 | **60/60** |
+| Median response time | 43.33 s | **1.04 s** |
+| P95 response time | 97.57 s | **1.36 s** |
+| Mean output tokens | 2,184.85 | **31.35** |
+
+In this experiment, **output tokens were reduced by 98.6% on these specific
+computational tasks**.
+
+Eight model-only responses reached the 4,096-token limit. These results describe
+the controlled arithmetic benchmark; they do not establish a speedup for the
+current production workload.
+
 ## Install and run
 
 Python 3.10+, Linux for the resource-limited worker, and an OpenAI-compatible backend.
