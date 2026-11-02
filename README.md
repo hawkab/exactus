@@ -12,7 +12,8 @@ are `InProcessExternalComputer` and `WorkerExternalComputer`.
 ## Arithmetic benchmark
 
 A controlled benchmark on October 30, 2026 compared 60 arithmetic tasks
-across four modes (240 runs total) using `qwen3.8-flash-next-nvidia`.
+across four modes (240 runs total) using
+[nvidia/Qwen3.8-Flash-Next-NVFP4](https://huggingface.co/nvidia/Qwen3.8-Flash-Next-NVFP4).
 
 | Metric | Model alone | Exactus with markers |
 |---|---:|---:|
@@ -23,10 +24,6 @@ across four modes (240 runs total) using `qwen3.8-flash-next-nvidia`.
 
 In this experiment, **output tokens were reduced by 98.6% on these specific
 computational tasks**.
-
-Eight model-only responses reached the 4,096-token limit. These results describe
-the controlled arithmetic benchmark; they do not establish a speedup for the
-current production workload.
 
 ## Install and run
 
