@@ -23,6 +23,7 @@ jobs:
       - run: ruff format --check .
       - run: python tools/validate_sources.py
       - run: python -m unittest discover -s tests -t .
+      - run: python -m build
       - run: python benchmarks/bench_compute.py 2
       - run: python benchmarks/bench_predict.py
       - run: python benchmarks/bench_live.py --dry-run --n 2 --runs 1

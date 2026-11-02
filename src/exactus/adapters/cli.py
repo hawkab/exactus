@@ -9,7 +9,7 @@ import base64
 import json
 import sys
 
-from ..domain.errors import ExactusError
+from ..domain.errors import DataError, ExactusError
 from .digest import HashlibHasher
 from .in_process import InProcessExternalComputer
 from .worker import WorkerExternalComputer
@@ -119,8 +119,13 @@ def _eval(args) -> int:
     """Evaluate one expression and print its rendered value."""
     data = {}
     for item in args.data:
-        name, _, payload = item.partition("=")
-        data[name] = base64.b64decode(payload)
+        name, separator, payload = item.partition("=")
+        if not separator or not name:
+            raise DataError("--data requires name=base64")
+        try:
+            data[name] = base64.b64decode(payload, validate=True)
+        except ValueError as exc:
+            raise DataError("--data payload is not valid base64") from exc
     external_computer = (
         WorkerExternalComputer()
         if args.worker

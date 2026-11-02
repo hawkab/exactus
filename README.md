@@ -113,6 +113,7 @@ ruff check .
 ruff format --check .
 python tools/validate_sources.py
 python -m unittest discover -s tests -t .
+python -m build
 ```
 
 Classes and functions use Python docstrings; each Python module declares
